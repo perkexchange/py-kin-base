@@ -14,12 +14,12 @@ class TestAsset(TestCase):
         cls.cny = Asset('CNY', cls.source)
 
     def test_native(self):
-        assert 'XLM' == Asset.native().code
+        assert 'KIN' == Asset.native().code
         assert Asset.native().issuer is None
         assert 'native' == Asset.native().type
 
     def test_is_native(self):
-        native = Asset('XLM')
+        native = Asset('KIN')
         assert native.is_native()
         assert not self.cny.is_native()
 
@@ -44,8 +44,8 @@ class TestAsset(TestCase):
         assert self.cny == cny_x
 
     def test_asset_to_dict(self):
-        native = Asset('XLM')
-        assert native.to_dict() == {'code': 'XLM', 'type': 'native'}
+        native = Asset('KIN')
+        assert native.to_dict() == {'code': 'KIN', 'type': 'native'}
         assert self.cny.to_dict() == {
             'code': 'CNY',
             'issuer': self.source,

@@ -42,7 +42,7 @@ def payment():
     time_bounds = {'minTime': min_time, 'maxTime': max_time}
     # time_bounds = [min_time, max_time]  # v0.1.x
     builder = Builder(dav_seed).add_time_bounds(time_bounds=time_bounds) \
-        .append_payment_op(destination=eve_address, amount='100', asset_code='XLM', asset_issuer=None)
+        .append_payment_op(destination=eve_address, amount='100', asset_code='KIN', asset_issuer=None)
     builder.sign()  # signed by dav with default seed
     builder.sign(alice_seed)  # signed by alice
     builder.sign(bob_seed)  # signed by bob

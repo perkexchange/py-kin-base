@@ -3,7 +3,7 @@ from stellar_base.builder import Builder
 alice_seed = 'SB4675LMYLBWMKENDBAO6ZTVPLI6AISE3VZZDZASUFWW2T4MEGKX7NEI'
 bob_address = 'GCRNOBFLTGLGSYOWCYINZA7JAAAZ5CXMSNM7QUYFYOHHIEZY4R6665MA'
 
-selling_code = 'XLM'
+selling_code = 'KIN'
 selling_issuer = None
 
 buying_code = 'XCN'

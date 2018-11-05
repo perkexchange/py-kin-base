@@ -17,7 +17,7 @@ horizon = horizon_testnet()  # for TESTNET
 payment_op = Payment(
     # source=Alice.address().decode(),
     destination=bob_address,
-    asset=Asset('XLM'),
+    asset=Asset('KIN'),
     amount='10.5')
 
 set_home_domain_op = SetOptions(home_domain='fed.network')

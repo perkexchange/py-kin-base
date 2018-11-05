@@ -109,8 +109,8 @@ class Builder(object):
         operations.
 
         :param str destination: Account address that is created and funded.
-        :param str starting_balance: Amount of XLM to send to the newly created
-            account. This XLM comes from the source account.
+        :param str starting_balance: Amount of KIN to send to the newly created
+            account. This KIN comes from the source account.
         :param str source: The source address to deduct funds from to fund the
             new account.
         :return: This builder instance.
@@ -156,7 +156,7 @@ class Builder(object):
     def append_payment_op(self,
                           destination,
                           amount,
-                          asset_code='XLM',
+                          asset_code='KIN',
                           asset_issuer=None,
                           source=None):
         """Append a :class:`Payment <stellar_base.operation.Payment>` operation
@@ -211,7 +211,7 @@ class Builder(object):
         """
         # path: a list of asset tuple which contains asset_code and asset_issuer,
         # [(asset_code, asset_issuer), (asset_code, asset_issuer)] for native asset you can deliver
-        # ('XLM', None)
+        # ('KIN', None)
 
         send_asset = Asset(send_code, send_issuer)
         dest_asset = Asset(dest_code, dest_issuer)
@@ -578,7 +578,7 @@ class Builder(object):
     def federation_payment(self,
                            fed_address,
                            amount,
-                           asset_code='XLM',
+                           asset_code='KIN',
                            asset_issuer=None,
                            source=None,
                            allow_http=False):
