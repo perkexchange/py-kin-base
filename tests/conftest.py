@@ -26,7 +26,7 @@ def testnet(request):
 
 
 @pytest.fixture(scope='session')
-def setup(testnet):
+def setup():
     class Struct:
         """Handy variable holder"""
 
@@ -36,26 +36,17 @@ def setup(testnet):
     issuer_keypair = Keypair.random()
     test_asset = Asset('TEST', issuer_keypair.address().decode())
 
-    # global testnet
-    if testnet:
-        from stellar_base.horizon import HORIZON_TEST
-        return Struct(
-            type='testnet',
-            network='TESTNET',
-            issuer_keypair=issuer_keypair,
-            test_asset=test_asset,
-            horizon_endpoint_uri=HORIZON_TEST)
-
-    # local testnet (zulucrypto docker)
-    # https://github.com/zulucrypto/docker-stellar-integration-test-network
+    # local testnet (kinecosystem docker)
     from stellar_base.network import NETWORKS
+    # we will leave this passphrase instead of changing every envelop in the test suite
     NETWORKS['CUSTOM'] = 'Integration Test Network ; zulucrypto'
     return Struct(
         type='local',
         network='CUSTOM',
         issuer_keypair=issuer_keypair,
         test_asset=test_asset,
-        horizon_endpoint_uri='http://localhost:8000')
+        horizon_endpoint_uri='http://localhost:8008',
+        friendbot_url='http://localhost:8001')
 
 
 class Helpers:
@@ -65,12 +56,8 @@ class Helpers:
     def fund_account(setup, address):
         for attempt in range(3):
             try:
-                if setup.type == 'local':
-                    r = requests.get(setup.horizon_endpoint_uri +
-                                     '/friendbot?addr=' + address)
-                else:
-                    r = requests.get(
-                        'https://friendbot.stellar.org/?addr=' + address)
+                r = requests.get(setup.friendbot_url +
+                                 '?addr=' + address)
                 j = json.loads(r.text)
                 if 'hash' in j:
                     print('\naccount {} funded successfully'.format(address))
