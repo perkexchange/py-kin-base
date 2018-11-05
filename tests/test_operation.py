@@ -3,9 +3,9 @@ import sys
 import mock
 import pytest
 
-from stellar_base.operation import *
-from stellar_base.asset import Asset
-from stellar_base.exceptions import NotValidParamError
+from kin_base.operation import *
+from kin_base.asset import Asset
+from kin_base.exceptions import NotValidParamError
 
 DEST = 'GCW24FUIFPC2767SOU4JI3JEAXIHYJFIJLH7GBZ2AVCBVP32SJAI53F5'
 SOURCE = 'GDJVFDG5OCW5PYWHB64MGTHGFF57DRRJEDUEFDEL2SLNIOONHYJWHA3Z'

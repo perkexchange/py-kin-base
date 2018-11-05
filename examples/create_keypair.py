@@ -1,5 +1,5 @@
-from stellar_base.keypair import Keypair
-from stellar_base.utils import StellarMnemonic
+from kin_base.keypair import Keypair
+from kin_base.utils import StellarMnemonic
 
 
 def generate_random_keypair():

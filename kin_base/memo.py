@@ -4,7 +4,7 @@ import six
 import abc
 import base64
 
-from stellar_base.utils import convert_hex_to_bytes
+from kin_base.utils import convert_hex_to_bytes
 from .stellarxdr import Xdr
 from .exceptions import NotValidParamError
 

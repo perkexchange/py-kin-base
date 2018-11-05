@@ -28,32 +28,13 @@ Installing
 
 Install from pypi, there are two packages here, please choose one of them:
 
-* The package is built automatically by Travis-CI. |stellar-sdk-image|
-
 .. |stellar-sdk-image| image:: https://img.shields.io/pypi/v/stellar-sdk.svg?style=flat-square&maxAge=1800
     :alt: PyPI
-    :target: https://pypi.python.org/pypi/stellar-sdk
+    :target: https://pypi.python.org/pypi/kin-base
 
 .. code-block:: text
 
-    pip install -U stellar-sdk
-
-* The package is maintained by antb123. |stellar-base-image|
-
-.. |stellar-base-image| image:: https://img.shields.io/pypi/v/stellar-base.svg?style=flat-square&maxAge=1800
-    :alt: PyPI
-    :target: https://pypi.python.org/pypi/stellar-base
-
-.. code-block:: text
-
-    pip install -U stellar-base
-
-Install from latest source code(*may be unstable*):
-
-.. code-block:: text
-
-    pip install git+git://github.com/StellarCN/py-stellar-base
-
+    pip install -U kin-base
 
 A Simple Example
 ----------------

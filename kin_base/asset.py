@@ -3,7 +3,7 @@
 import base64
 import re
 
-from stellar_base.exceptions import AssetCodeInvalidError, StellarAddressInvalidError
+from kin_base.exceptions import AssetCodeInvalidError, StellarAddressInvalidError
 from .utils import account_xdr_object, encode_check, is_valid_address
 from .stellarxdr import Xdr
 

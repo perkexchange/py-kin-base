@@ -3,9 +3,9 @@ import codecs
 
 from setuptools import setup, find_packages
 
-package_name = "stellar-sdk"  # or stellar-base
+package_name = "kin-base"
 
-exec(open("stellar_base/version.py").read())
+exec(open("kin_base/version.py").read())
 
 with codecs.open('README.rst', encoding='utf-8') as file:
     long_description = file.read()
@@ -21,10 +21,12 @@ setup(
     long_description=long_description,
     keywords=["stellar.org", "lumens", "xlm", "blockchain", "distributed exchange", "cryptocurrency", "dex",
               "stellar-core", "horizon", "sdex", "trading"],
-    url='http://github.com/stellarCN/py-stellar-base/',
+    url='https://github.com/kinecosystem/py-kin-base/',
     license='Apache',
     author='Eno, overcat',
     author_email='appweb.cn@gmail.com, 4catcode@gmail.com',
+    maintainer='Ron Serruya',
+    maintainer_email='ron.serruya@kik.com',
     include_package_data=True,
     packages=find_packages(),
     classifiers=[

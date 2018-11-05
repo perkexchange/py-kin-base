@@ -3,7 +3,7 @@
 import requests
 import toml
 
-from stellar_base.utils import is_valid_address
+from kin_base.utils import is_valid_address
 from .exceptions import FederationError, StellarAddressInvalidError
 
 
