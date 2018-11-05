@@ -10,21 +10,13 @@ init:
 .PHONY: init
 
 start:
-	docker run --rm -d -p "8000:8000" --name stellar zulucrypto/stellar-integration-test-network
+	cd images && ./init.sh
 	sleep 10
 .PHONY: start
 
-stop:
-	docker stop stellar
-.PHONY: stop
-
 test:
-	python -m pytest -v -rs tests --cov
+	python -m pytest -v -rs --cov -s -x --fulltrace tests
 .PHONY: test
-
-testnet:
-	python -m pytest -v -rs tests --testnet --cov
-.PHONY: testnet
 
 codecov:
 	pip install codecov
