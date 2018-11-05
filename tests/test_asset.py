@@ -2,8 +2,8 @@
 from unittest import TestCase
 import pytest
 
-from stellar_base.asset import Asset
-from stellar_base.stellarxdr import Xdr
+from kin_base.asset import Asset
+from kin_base.stellarxdr import Xdr
 
 
 class TestAsset(TestCase):

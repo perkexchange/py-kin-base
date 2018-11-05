@@ -2,11 +2,11 @@
 from os import path
 import pytest
 
-from stellar_base.operation import *
-from stellar_base.asset import Asset
-from stellar_base.keypair import Keypair
-from stellar_base.transaction import Transaction
-from stellar_base.transaction_envelope import TransactionEnvelope as Te
+from kin_base.operation import *
+from kin_base.asset import Asset
+from kin_base.keypair import Keypair
+from kin_base.transaction import Transaction
+from kin_base.transaction_envelope import TransactionEnvelope as Te
 
 
 class TestOp:

@@ -1,8 +1,8 @@
 from unittest import TestCase
 from pytest import raises
 
-from stellar_base.keypair import Keypair
-from stellar_base.exceptions import MissingSigningKeyError, NotValidParamError
+from kin_base.keypair import Keypair
+from kin_base.exceptions import MissingSigningKeyError, NotValidParamError
 
 
 def test_sep0005():

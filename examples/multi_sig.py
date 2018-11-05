@@ -1,8 +1,8 @@
 # https://www.stellar.org/developers/guides/concepts/multi-sig.html
 import time
 
-from stellar_base.keypair import Keypair
-from stellar_base.builder import Builder
+from kin_base.keypair import Keypair
+from kin_base.builder import Builder
 
 alice_seed = 'SDW74JLSQCDDJELC3S6EP4V4SGIM6MSFFVT73PMKIH4BAAJX6OZY4PCC'  # GCDCDLVJNSLJWWHH2Q36IGBYZP6O6MFZOMXSW2DNBUCWKZDCRTIT73DP
 bob_seed = 'SCEQG2XD2HPDKBLIFHFT2CFC5FLOHNT2HNHTTPAXFXS6YDW4UCP57V2H'  # GCNT7JJDVQ5ZAZ4OLHXUJPONYATFE5YOTRTKMPI2EQCGU2SK4QGCETJ5

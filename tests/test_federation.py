@@ -3,7 +3,7 @@
 import pytest
 import mock
 
-from stellar_base.federation import *
+from kin_base.federation import *
 
 
 def mocked_requests_get(*args, **kwargs):
@@ -52,7 +52,7 @@ class TestFederation(object):
         with pytest.raises(FederationError, match='Not a valid domain name.'):
             federation('false*address')
 
-    @mock.patch('stellar_base.federation.get_federation_service')
+    @mock.patch('kin_base.federation.get_federation_service')
     def test_federation_none_service(self, get_service):
         get_service.return_value = None
         with pytest.raises(
@@ -60,9 +60,9 @@ class TestFederation(object):
             federation('fed*stellar.org')
 
     @mock.patch(
-        'stellar_base.federation.requests.get',
+        'kin_base.federation.requests.get',
         side_effect=mocked_requests_get)
-    @mock.patch('stellar_base.federation.get_federation_service')
+    @mock.patch('kin_base.federation.get_federation_service')
     def test_federation_normal_service_by_name(self, mock_service, mock_get):
         mock_service.return_value = 'https://www.fed-domain.com/federation'
         response = federation('fed*fed-domain.com')
@@ -71,9 +71,9 @@ class TestFederation(object):
         ) == 'GBTCBCWLE6YVTR5Y5RRZC36Z37OH22G773HECWEIZTZJSN4WTG3CSOES'
 
     @mock.patch(
-        'stellar_base.federation.requests.get',
+        'kin_base.federation.requests.get',
         side_effect=mocked_requests_get)
-    @mock.patch('stellar_base.federation.get_federation_service')
+    @mock.patch('kin_base.federation.get_federation_service')
     def test_federation_normal_service_by_id(self, mock_service, mock_get):
         mock_service.return_value = 'https://www.fed-domain.com/federation'
         response = federation(
@@ -84,7 +84,7 @@ class TestFederation(object):
         ) == '1CqDFDxR9Tv696j86PwtyxhA5p9ev1EviJ*naobtc.com'
 
     @mock.patch(
-        'stellar_base.federation.requests.get',
+        'kin_base.federation.requests.get',
         side_effect=mocked_requests_get)
     def test_get_toml(self, get_toml):
         response = get_stellar_toml('fed-domain.com')
@@ -92,7 +92,7 @@ class TestFederation(object):
             'FEDERATION_SERVER') == "https://www.fed-domain.com/federation"
 
     @mock.patch(
-        'stellar_base.federation.requests.get',
+        'kin_base.federation.requests.get',
         side_effect=mocked_requests_get)
     def test_get_toml_http(self, get_toml):
         response = get_stellar_toml('fed-domain.com', allow_http=True)
@@ -100,21 +100,21 @@ class TestFederation(object):
             'FEDERATION_SERVER') == "http://www.fed-domain.com/federation"
 
     @mock.patch(
-        'stellar_base.federation.requests.get',
+        'kin_base.federation.requests.get',
         side_effect=mocked_requests_get)
     def test_get_fed_service(self, get_toml):
         response = get_federation_service('fed-domain.com')
         assert response == "https://www.fed-domain.com/federation"
 
     @mock.patch(
-        'stellar_base.federation.requests.get',
+        'kin_base.federation.requests.get',
         side_effect=mocked_requests_get)
     def test_get_fed_service_http(self, get_toml):
         response = get_federation_service('fed-domain.com', allow_http=True)
         assert response == "http://www.fed-domain.com/federation"
 
     @mock.patch(
-        'stellar_base.federation.requests.get',
+        'kin_base.federation.requests.get',
         side_effect=mocked_requests_get)
     def test_get_auth_server(self, get_toml):
         response = get_auth_server('fed-domain.com')

@@ -1,10 +1,10 @@
-from stellar_base.keypair import Keypair
-from stellar_base.asset import Asset
-from stellar_base.operation import Payment, SetOptions
-from stellar_base.transaction import Transaction
-from stellar_base.transaction_envelope import TransactionEnvelope as Te
-from stellar_base.memo import TextMemo
-from stellar_base.horizon import horizon_testnet, horizon_livenet
+from kin_base.keypair import Keypair
+from kin_base.asset import Asset
+from kin_base.operation import Payment, SetOptions
+from kin_base.transaction import Transaction
+from kin_base.transaction_envelope import TransactionEnvelope as Te
+from kin_base.memo import TextMemo
+from kin_base.horizon import horizon_testnet, horizon_livenet
 
 alice_seed = 'SBUORYV26AZ3ULEEC5FQ4NKPVRO7MBAWTW26YKCDPPKFGMK7WAYNX4UN'
 bob_address = 'GBZF7GQJXXHD3OL3B5IOUICFDYIATZZ3F3XQ7SOQ5PXLVQMDSOI5ACEE'
