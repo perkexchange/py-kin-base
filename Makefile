@@ -4,8 +4,8 @@
 default: ;
 
 init:
-	pip install .
-	pip install -e .
+	sudo pip install .
+	sudo pip install -e .
 	pip install pytest-cov
 .PHONY: init
 
