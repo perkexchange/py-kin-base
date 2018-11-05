@@ -2,9 +2,9 @@ import json
 import pytest
 import requests
 
-from stellar_base.asset import Asset
-from stellar_base.keypair import Keypair
-from stellar_base.builder import Builder
+from kin_base.asset import Asset
+from kin_base.keypair import Keypair
+from kin_base.builder import Builder
 
 import logging
 logging.basicConfig()
@@ -37,7 +37,7 @@ def setup():
     test_asset = Asset('TEST', issuer_keypair.address().decode())
 
     # local testnet (kinecosystem docker)
-    from stellar_base.network import NETWORKS
+    from kin_base.network import NETWORKS
     # we will leave this passphrase instead of changing every envelop in the test suite
     NETWORKS['CUSTOM'] = 'Integration Test Network ; zulucrypto'
     return Struct(

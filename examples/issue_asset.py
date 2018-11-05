@@ -1,8 +1,8 @@
 # See: https://www.stellar.org/developers/guides/issuing-assets.html
 
-from stellar_base.keypair import Keypair
-from stellar_base.asset import Asset
-from stellar_base.builder import Builder
+from kin_base.keypair import Keypair
+from kin_base.asset import Asset
+from kin_base.builder import Builder
 
 # Keys for accounts to issue and receive the new asset
 issuing_secret = 'SCBHQEGSNBTT4S7Y73YAF3M3JSVSTSNBGAVU5M4XVFGUF7664EUXQHFU'

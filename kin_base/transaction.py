@@ -2,7 +2,7 @@
 
 import base64
 
-from stellar_base.exceptions import NotValidParamError
+from kin_base.exceptions import NotValidParamError
 from .memo import xdr_to_memo, NoneMemo
 from .operation import Operation
 from .stellarxdr import Xdr
@@ -16,12 +16,12 @@ class Transaction(object):
     on Stellar's network.
 
     A transaction contains a list of operations (see :class:`Operation
-    <stellar_base.operation.Operation>`),
+    <kin_base.operation.Operation>`),
     which are all executed in order as one ACID transaction, along with an
     associated source account, fee, account sequence number, list of
     signatures, both an optional memo and an optional timebound. Typically a
     :class:`Transaction` is placed in a :class:`TransactionEnvelope
-    <stellar_base.transaction_envelope.TransactionEnvelope>` which is
+    <kin_base.transaction_envelope.TransactionEnvelope>` which is
     then signed before being sent over the network.
 
     For more information on Transactions in Stellar, see `Stellar's guide
@@ -41,7 +41,7 @@ class Transaction(object):
             lower and upper bound of when a given transaction will be valid.
     :param Memo memo: The memo being sent with the transaction, being
           represented as one of the subclasses of the
-          :class:`Memo <stellar_base.memo.Memo>` object.
+          :class:`Memo <kin_base.memo.Memo>` object.
     :param int fee: The fee amount for the transaction, which should equal
           FEE (currently 100 stroops) multiplied by the number of
           operations in the transaction. See `Stellar's latest documentation
@@ -49,8 +49,8 @@ class Transaction(object):
           <https://www.stellar.org/developers/guides/concepts/fees.html#transaction-fee>`_
           for more information.
     :param list operations: A list of :class:`Operation
-          <stellar_base.operation.Operation>` objects (typically its
-          subclasses as defined in :mod:`stellar_base.operation` to be
+          <kin_base.operation.Operation>` objects (typically its
+          subclasses as defined in :mod:`kin_base.operation` to be
           included in the transaction. By default this is an empty list.
     """
 
@@ -82,7 +82,7 @@ class Transaction(object):
                                            maxTime=time_bounds['maxTime'])]
 
     def add_operation(self, operation):
-        """Add an :class:`Operation <stellar_base.operation.Operation>` to
+        """Add an :class:`Operation <kin_base.operation.Operation>` to
         this transaction.
 
         This method will only add an operation if it is not already in the

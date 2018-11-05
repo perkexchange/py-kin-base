@@ -85,7 +85,7 @@ class Builder(object):
         self.te = None
 
     def append_op(self, operation):
-        """Append an :class:`Operation <stellar_base.operation.Operation>` to
+        """Append an :class:`Operation <kin_base.operation.Operation>` to
         the list of operations.
 
         Add the operation specified if it doesn't already exist in the list of
@@ -105,7 +105,7 @@ class Builder(object):
                                  starting_balance,
                                  source=None):
         """Append a :class:`CreateAccount
-        <stellar_base.operation.CreateAccount>` operation to the list of
+        <kin_base.operation.CreateAccount>` operation to the list of
         operations.
 
         :param str destination: Account address that is created and funded.
@@ -121,7 +121,7 @@ class Builder(object):
 
     def append_trust_op(self, destination, code, limit=None, source=None):
         """append_trust_op will be deprecated in the future, use append_change_trust_op instead.
-        Append a :class:`ChangeTrust <stellar_base.operation.ChangeTrust>`
+        Append a :class:`ChangeTrust <kin_base.operation.ChangeTrust>`
         operation to the list of operations.
 
         :param str destination: The issuer address for the asset.
@@ -139,7 +139,7 @@ class Builder(object):
         return self.append_change_trust_op(asset_code=code, asset_issuer=destination, limit=limit, source=source)
 
     def append_change_trust_op(self, asset_code, asset_issuer, limit=None, source=None):
-        """Append a :class:`ChangeTrust <stellar_base.operation.ChangeTrust>`
+        """Append a :class:`ChangeTrust <kin_base.operation.ChangeTrust>`
         operation to the list of operations.
 
         :param str asset_issuer: The issuer address for the asset.
@@ -159,7 +159,7 @@ class Builder(object):
                           asset_code='XLM',
                           asset_issuer=None,
                           source=None):
-        """Append a :class:`Payment <stellar_base.operation.Payment>` operation
+        """Append a :class:`Payment <kin_base.operation.Payment>` operation
         to the list of operations.
 
         :param str destination: Account address that receives the payment.
@@ -185,7 +185,7 @@ class Builder(object):
                                dest_amount,
                                path,
                                source=None):
-        """Append a :class:`PathPayment <stellar_base.operation.PathPayment>`
+        """Append a :class:`PathPayment <kin_base.operation.PathPayment>`
         operation to the list of operations.
 
         :param str destination: The destination address (Account ID) for the
@@ -228,7 +228,7 @@ class Builder(object):
                               asset_code,
                               authorize,
                               source=None):
-        """Append an :class:`AllowTrust <stellar_base.operation.AllowTrust>`
+        """Append an :class:`AllowTrust <kin_base.operation.AllowTrust>`
         operation to the list of operations.
 
         :param str trustor: The account of the recipient of the trustline.
@@ -258,14 +258,14 @@ class Builder(object):
                               signer_type=None,
                               signer_weight=None,
                               source=None):
-        """Append a :class:`SetOptions <stellar_base.operation.SetOptions>`
+        """Append a :class:`SetOptions <kin_base.operation.SetOptions>`
         operation to the list of operations.
 
         .. _Accounts:
             https://www.stellar.org/developers/guides/concepts/accounts.html
 
         :param str inflation_dest: The address in which to send inflation to on
-            an :class:`Inflation <stellar_base.operation.Inflation>` operation.
+            an :class:`Inflation <kin_base.operation.Inflation>` operation.
         :param int clear_flags: Indicates which flags to clear. For details
             about the flags, please refer to Stellar's documentation on
             `Accounts`_. The bit mask integer subtracts from the existing flags
@@ -319,7 +319,7 @@ class Builder(object):
         """Add a HashX signer to an account.
 
         Add a HashX signer to an account via a :class:`SetOptions
-        <stellar_base.operation.SetOptions` operation. This is a helper
+        <kin_base.operation.SetOptions` operation. This is a helper
         function for :meth:`append_set_options_op`.
 
         :param hashx: The address of the new hashX signer.
@@ -343,7 +343,7 @@ class Builder(object):
         """Add a PreAuthTx signer to an account.
 
         Add a PreAuthTx signer to an account via a :class:`SetOptions
-        <stellar_base.operation.SetOptions` operation. This is a helper
+        <kin_base.operation.SetOptions` operation. This is a helper
         function for :meth:`append_set_options_op`.
 
         :param pre_auth_tx: The address of the new preAuthTx signer - obtained by calling `hash_meta` on the TransactionEnvelope.
@@ -369,7 +369,7 @@ class Builder(object):
                                price,
                                offer_id=0,
                                source=None):
-        """Append a :class:`ManageOffer <stellar_base.operation.ManageOffer>`
+        """Append a :class:`ManageOffer <kin_base.operation.ManageOffer>`
         operation to the list of operations.
 
         :param str selling_code: The asset code for the asset the offer creator
@@ -409,7 +409,7 @@ class Builder(object):
                                        price,
                                        source=None):
         """Append a :class:`CreatePassiveOffer
-        <stellar_base.operation.CreatePassiveOffer>` operation to the list of
+        <kin_base.operation.CreatePassiveOffer>` operation to the list of
         operations.
 
         :param str selling_code: The asset code for the asset the offer creator
@@ -440,7 +440,7 @@ class Builder(object):
 
     def append_account_merge_op(self, destination, source=None):
         """Append a :class:`AccountMerge
-        <stellar_base.operation.AccountMerge>` operation to the list of
+        <kin_base.operation.AccountMerge>` operation to the list of
         operations.
 
         :param str destination: The ID of the offer. 0 for new offer. Set to
@@ -455,7 +455,7 @@ class Builder(object):
 
     def append_inflation_op(self, source=None):
         """Append a :class:`Inflation
-        <stellar_base.operation.Inflation>` operation to the list of
+        <kin_base.operation.Inflation>` operation to the list of
         operations.
 
         :param str source: The source address that is running the inflation
@@ -467,7 +467,7 @@ class Builder(object):
         return self.append_op(op)
 
     def append_manage_data_op(self, data_name, data_value, source=None):
-        """Append a :class:`ManageData <stellar_base.operation.ManageData>`
+        """Append a :class:`ManageData <kin_base.operation.ManageData>`
         operation to the list of operations.
 
         :param str data_name: String up to 64 bytes long. If this is a new Name
@@ -486,7 +486,7 @@ class Builder(object):
         return self.append_op(op)
 
     def append_bump_sequence_op(self, bump_to, source=None):
-        """Append a :class:`BumpSequence <stellar_base.operation.BumpSequence>`
+        """Append a :class:`BumpSequence <kin_base.operation.BumpSequence>`
         operation to the list of operations.
 
         Only available in protocol version 10 and above
@@ -504,7 +504,7 @@ class Builder(object):
         """Set the memo for the transaction build by this :class:`Builder`.
 
         :param memo: A memo to add to this transaction.
-        :type memo: :class:`Memo <stellar_base.memo.Memo>`
+        :type memo: :class:`Memo <kin_base.memo.Memo>`
         :return: This builder instance.
 
         """
@@ -513,7 +513,7 @@ class Builder(object):
 
     def add_text_memo(self, memo_text):
         """Set the memo for the transaction to a new :class:`TextMemo
-        <stellar_base.memo.TextMemo>`.
+        <kin_base.memo.TextMemo>`.
 
         :param str memo_text: The text for the memo to add.
         :return: This builder instance.
@@ -524,7 +524,7 @@ class Builder(object):
 
     def add_id_memo(self, memo_id):
         """Set the memo for the transaction to a new :class:`IdMemo
-        <stellar_base.memo.IdMemo>`.
+        <kin_base.memo.IdMemo>`.
 
         :param int memo_id: A 64 bit unsigned integer to set as the memo.
         :return: This builder instance.
@@ -535,7 +535,7 @@ class Builder(object):
 
     def add_hash_memo(self, memo_hash):
         """Set the memo for the transaction to a new :class:`HashMemo
-        <stellar_base.memo.HashMemo>`.
+        <kin_base.memo.HashMemo>`.
 
         :param memo_hash: A 32 byte hash or hex encoded string to use as the memo.
         :type memo_hash: bytes, str
@@ -547,7 +547,7 @@ class Builder(object):
 
     def add_ret_hash_memo(self, memo_return):
         """Set the memo for the transaction to a new :class:`RetHashMemo
-        <stellar_base.memo.RetHashMemo>`.
+        <kin_base.memo.RetHashMemo>`.
 
         :param bytes memo_return: A 32 byte hash or hex encoded string intended to be interpreted as
             the hash of the transaction the sender is refunding.
@@ -582,11 +582,11 @@ class Builder(object):
                            asset_issuer=None,
                            source=None,
                            allow_http=False):
-        """Append a :class:`Payment <stellar_base.operation.Payment>` operation
+        """Append a :class:`Payment <kin_base.operation.Payment>` operation
         to the list of operations using federation on the destination address.
 
         Translates the destination stellar address to an account ID via
-        :func:`federation <stellar_base.federation.federation>`, before
+        :func:`federation <kin_base.federation.federation>`, before
         creating a new payment operation via :meth:`append_payment_op`.
 
         :param str fed_address: A Stellar Address that needs to be translated
@@ -614,12 +614,12 @@ class Builder(object):
 
     def gen_tx(self):
         """Generate a :class:`Transaction
-        <stellar_base.transaction.Transaction>` object from the list of
+        <kin_base.transaction.Transaction>` object from the list of
         operations contained within this object.
 
         :return: A transaction representing all of the operations that have
             been appended to this builder.
-        :rtype: :class:`Transaction <stellar_base.transaction.Transaction>`
+        :rtype: :class:`Transaction <kin_base.transaction.Transaction>`
 
         """
         if not self.address:
@@ -638,12 +638,12 @@ class Builder(object):
 
     def gen_te(self):
         """Generate a :class:`TransactionEnvelope
-        <stellar_base.transaction_envelope.TransactionEnvelope>` around the
+        <kin_base.transaction_envelope.TransactionEnvelope>` around the
         generated Transaction via the list of operations in this instance.
 
         :return: A transaction envelope ready to send over the network.
         :rtype: :class:`TransactionEnvelope
-            <stellar_base.transaction_envelope.TransactionEnvelope>`
+            <kin_base.transaction_envelope.TransactionEnvelope>`
 
         """
         if self.tx is None:
@@ -657,7 +657,7 @@ class Builder(object):
     def gen_xdr(self):
         """Create an XDR object around a newly generated
         :class:`TransactionEnvelope
-        <stellar_base.transaction_envelope.TransactionEnvelope>`.
+        <kin_base.transaction_envelope.TransactionEnvelope>`.
 
         :return: An XDR object representing a newly created transaction
             envelope ready to send over the network.
@@ -704,7 +704,7 @@ class Builder(object):
 
     def import_from_xdr(self, xdr):
         """Create a :class:`TransactionEnvelope
-        <stellar_base.transaction_envelope.TransactionEnvelope>` via an XDR
+        <kin_base.transaction_envelope.TransactionEnvelope>` via an XDR
         object.
 
         In addition, sets the fields of this builder (the transaction envelope,
@@ -739,7 +739,7 @@ class Builder(object):
 
     def sign(self, secret=None):
         """Sign the generated :class:`TransactionEnvelope
-        <stellar_base.transaction_envelope.TransactionEnvelope>` from the list
+        <kin_base.transaction_envelope.TransactionEnvelope>` from the list
         of this builder's operations.
 
         :param str secret: The secret seed to use if a key pair or secret was
@@ -768,7 +768,7 @@ class Builder(object):
         Horizon.
 
         Sends the generated transaction envelope over the wire via this
-        builder's :class:`Horizon <stellar_base.horizon.Horizon>` instance.
+        builder's :class:`Horizon <kin_base.horizon.Horizon>` instance.
         Note that you'll typically want to sign the transaction before
         submitting via the sign methods.
 

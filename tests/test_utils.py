@@ -2,10 +2,10 @@
 from unittest import TestCase
 import pytest
 
-from stellar_base import utils
-from stellar_base.exceptions import StellarAddressInvalidError, StellarSecretInvalidError
-from stellar_base.stellarxdr import StellarXDR_pack as Xdr
-from stellar_base.utils import is_valid_address, is_valid_secret_key
+from kin_base import utils
+from kin_base.exceptions import StellarAddressInvalidError, StellarSecretInvalidError
+from kin_base.stellarxdr import StellarXDR_pack as Xdr
+from kin_base.utils import is_valid_address, is_valid_secret_key
 
 
 class TestUtils(TestCase):

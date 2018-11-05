@@ -5,11 +5,11 @@ import binascii
 
 import pytest
 
-from stellar_base.exceptions import NotValidParamError
-from stellar_base.memo import (
+from kin_base.exceptions import NotValidParamError
+from kin_base.memo import (
     NoneMemo, TextMemo, HashMemo, IdMemo, RetHashMemo, xdr_to_memo
 )
-from stellar_base.stellarxdr import Xdr
+from kin_base.stellarxdr import Xdr
 
 
 @pytest.mark.parametrize("memo_obj", [

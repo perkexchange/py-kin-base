@@ -2,9 +2,9 @@
 
 import pytest
 
-from stellar_base.builder import Builder
-from stellar_base.keypair import Keypair
-from stellar_base.exceptions import SignatureExistError
+from kin_base.builder import Builder
+from kin_base.keypair import Keypair
+from kin_base.exceptions import SignatureExistError
 
 # TODO: These endpoints really need to be mocked out.
 

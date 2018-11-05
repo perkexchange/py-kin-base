@@ -20,7 +20,7 @@ class TransactionEnvelope(object):
     network.
 
     :param tx: The transaction that is encapsulated in this envelope.
-    :type tx: :class:`Transaction <stellar_base.transaction.Transaction>`
+    :type tx: :class:`Transaction <kin_base.transaction.Transaction>`
     :param list signatures: which contains a list of signatures that have
           already been created.
     :param str network_id: which contains the network ID for which network this
@@ -48,9 +48,9 @@ class TransactionEnvelope(object):
 
         :param keypair: The keypair to use for signing this transaction
             envelope.
-        :type keypair: :class:`Keypair <stellar_base.keypair.Keypair>`
+        :type keypair: :class:`Keypair <kin_base.keypair.Keypair>`
         :raises: :exc:`SignatureExistError
-            <stellar_base.utils.SignatureExistError>`
+            <kin_base.utils.SignatureExistError>`
 
         """
         assert isinstance(keypair, Keypair)
