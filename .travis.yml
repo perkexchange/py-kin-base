@@ -10,11 +10,11 @@ services:
 cache:
   - pip
 
-before_install:
-  - make start
-
 install:
   - make init
+
+before_script:
+  - make start
 
 script:
   - make test
