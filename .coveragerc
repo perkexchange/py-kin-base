@@ -1,0 +1,21 @@
+[run]
+source = stellar_base,tests
+
+[report]
+omit =
+    stellar_base/stellarxdr/*
+    stellar_base/base58.py
+    stellar_base/version.py
+    stellar_base/purecrc16.py
+
+exclude_lines =
+    pragma: no cover
+
+    def __repr__
+    if self\.debug
+
+    raise AssertionError
+    raise NotImplementedError
+
+    if 0:
+    if __name__ == .__main__.:
