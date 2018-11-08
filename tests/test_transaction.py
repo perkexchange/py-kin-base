@@ -49,6 +49,14 @@ class TestTx:
             'memo': TextMemo('tēštīņģ'),
         }))
 
+    def test_imprecise_fee(self, setup):
+        with pytest.raises(NotValidParamError):
+            self.do(setup.network, {
+                'sequence': 1,
+                'memo': TextMemo('testing'),
+                'fee': 100.54
+            })
+
 
 class TestMultiOp:
     address = 'GDJVFDG5OCW5PYWHB64MGTHGFF57DRRJEDUEFDEL2SLNIOONHYJWHA3Z'
