@@ -1,12 +1,12 @@
 [run]
-source = stellar_base,tests
+source = kin_base,tests
 
 [report]
 omit =
-    stellar_base/stellarxdr/*
-    stellar_base/base58.py
-    stellar_base/version.py
-    stellar_base/purecrc16.py
+    kin_base/stellarxdr/*
+    kin_base/base58.py
+    kin_base/version.py
+    kin_base/purecrc16.py
 
 exclude_lines =
     pragma: no cover

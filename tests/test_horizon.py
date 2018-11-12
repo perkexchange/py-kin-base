@@ -36,6 +36,6 @@ def test_submit(setup, helpers):
                                  Payment(
                                      destination=address,
                                      asset=Asset.native(),
-                                     amount="0.0001618"))
+                                     amount="0.1618"))
     response = horizon.submit(envelope_xdr)
     assert 'hash' in response

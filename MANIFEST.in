@@ -1,4 +1,4 @@
-include stellar_base/wordlist/chinese.txt
+include kin_base/wordlist/chinese.txt
 include README.rst
 include LICENSE
 include requirements.txt
