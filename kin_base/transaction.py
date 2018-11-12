@@ -69,7 +69,7 @@ class Transaction(object):
         self.sequence = int(sequence) + 1
         self.memo = memo or NoneMemo()
         if fee is not None:
-            if float(fee) != int(fee):
+            if not isinstance(fee, int):
                 raise NotValidParamError('Fee must be an integer')
         self.fee = int(fee) if fee else self.default_fee
         self.operations = operations or []
