@@ -12,7 +12,7 @@ SOURCE = 'GDJVFDG5OCW5PYWHB64MGTHGFF57DRRJEDUEFDEL2SLNIOONHYJWHA3Z'
 
 
 @pytest.mark.parametrize("s, error_type", [
-    ("0.12345", NotValidParamError),
+    ("0.123456", NotValidParamError),
     ("test", NotValidParamError),
     (0.1234, NotValidParamError),
 ])
@@ -24,10 +24,10 @@ def test_to_xdr_amount_raise(s, error_type):
 
 
 @pytest.mark.parametrize("num, s", [
-    (10**4, "1"),
-    (20 * 10**4, "20"),
-    (1234, "0.1234"),
-    (112345, "11.2345"),
+    (10**5, "1"),
+    (20 * 10**5, "20"),
+    (1234, "0.01234"),
+    (112345, "1.12345"),
 ])
 def test_from_and_to_xdr_amount(num, s):
     assert s == Operation.from_xdr_amount(num)
