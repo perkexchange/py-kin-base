@@ -11,7 +11,7 @@ from .utils import (account_xdr_object, best_rational_approximation as best_r,
                     is_valid_address, convert_hex_to_bytes)
 from .exceptions import StellarAddressInvalidError, NotValidParamError
 
-ONE = Decimal(10 ** 4)  # TODO: move to a config file
+ONE = Decimal(10 ** 5)
 
 
 class Operation(object):
@@ -99,7 +99,7 @@ class Operation(object):
         try:
             amount = int((Decimal(value) * ONE).to_integral_exact(context=Context(traps=[Inexact])))
         except decimal.Inexact:
-            raise NotValidParamError("Value of '{}' must have at most 4 digits after the decimal.".format(value))
+            raise NotValidParamError("Value of '{}' must have at most 5 digits after the decimal.".format(value))
         except decimal.InvalidOperation:
             raise NotValidParamError("Value of '{}' must represent a positive number.".format(value))
         return amount
@@ -415,7 +415,7 @@ class ChangeTrust(Operation):
     :param str source: The source account (defaults to transaction source).
 
     """
-    default_limit = "922337203685.4775"
+    default_limit = "92233720368547.75807"
 
     @classmethod
     def type_code(cls):
