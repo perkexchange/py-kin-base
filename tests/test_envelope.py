@@ -22,53 +22,58 @@ class TestOp:
         signer = Keypair.from_seed(self.seed)
         envelope.sign(signer)
         envelope_b64 = envelope.xdr()
+        print(envelope_b64)
         return envelope_b64
 
     def test_createAccount_min(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAAAAJiWgAAAAAAAAAABzT4TYwAAAECCSD2qUFQXXfQTC44k3atcc2uiK+7ju0DGxnF/0guN+gRT6p1LcAJy3NQtd8jDDoa7pjoriZlXcVXiTCtyAPMD'
-        assert (result == self.do(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAAAAAAnEAAAAAAAAAABzT4TYwAAAEDtPANNTqbKHS+DnBPj3xCPpp9YPIOmWje9i9EaUZOdCXvC7N0gR5pKyJ9KojGgpkrnHKscxoVH13yrINLzaxgO'
+        generated_result = self.do(
             setup.network,
             op=CreateAccount(
                 destination=self.dest,
                 starting_balance=self.amount,
-            )))
+            ))
+        assert result == generated_result
 
     def test_payment_min(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAQAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAEAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAAAAAAAAACYloAAAAAAAAAAAc0+E2MAAABAlw7SoaRvm53xhs7ztskutJ3MlhBJ0ME2+uSBLiSCNV+wSolCAIIlWlMF376ciT5V9J6iWMcW1hVrZAQSI4cjDw=='
-        assert (result == self.do(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAQAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAEAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAAAAAAAAAAAJxAAAAAAAAAAAc0+E2MAAABAu78hB9ELJKA+vQfpnTbNPmVjlg3s3LDwgMmIS/xcvp1Gc64pPLiO1mvUWreo7fJHy0JAjBWlkT51y987f+IrDA=='
+        generated_result = self.do(
             setup.network,
             op=Payment(
                 source=self.source,
                 destination=self.dest,
                 asset=Asset.native(),
                 amount=self.amount,
-            )))
+            ))
+        assert result == generated_result
 
     def test_payment_short_asset(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAQAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAEAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAABVVNENAAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAAAmJaAAAAAAAAAAAHNPhNjAAAAQJHNNenCn8ZIQMoYh86u6dVxZ20ZIsPeZFqRlNpzwgp4P5a0w82Q/pcg2vdG5h6xVClY7zKqK1JSIU1/RDlCvA0='
-        assert (result == self.do(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAQAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAEAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAABVVNENAAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAAAACcQAAAAAAAAAAHNPhNjAAAAQDcXlsaL4bVvglXAMHCDRTP7/VKNXuZ2pDZG3d972eTFVx2GkmhruBSivk4T8AD4D2p7L2sJb2azmhntPiGYNQ4='
+        generated_result = self.do(
             setup.network,
             op=Payment(
                 source=self.source,
                 destination=self.dest,
                 asset=Asset('USD4', self.source),
                 amount=self.amount,
-            )))
+            ))
+        assert result == generated_result
 
     def test_payment_long_asset(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAQAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAEAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAACU05BQ0tTNzg5QUJDAAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAAACYloAAAAAAAAAAAc0+E2MAAABAvtmMm0ySPn7q3SXccCPVa/J58MsWiL5ID/LlPRHtPP6A6N6LeLkB2PG0AXUv4d0t5Z29rKzCW3tlaJbGciYAAA=='
-        assert (result == self.do(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAQAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAEAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAACU05BQ0tTNzg5QUJDAAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAAAAAJxAAAAAAAAAAAc0+E2MAAABAXI0LGjLyEHJNsqxjAbN/Ry9eJUo8SWS7iib7QcM0nZOwAzzRICPxyr/ldL777P/p8xsWHA4vvYeNI3tGvkquCQ=='
+        generated_result = self.do(
             setup.network,
             op=Payment(
                 source=self.source,
                 destination=self.dest,
                 asset=Asset('SNACKS789ABC', self.source),
                 amount=self.amount,
-            )))
+            ))
+        assert result == generated_result
 
     def test_pathPayment_min(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAQAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAIAAAAAAAAAAACYloAAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAAAAAAAAACYloAAAAAAAAAAAAAAAAHNPhNjAAAAQI1tBUmMqDa497gw9JJVgucfaiKr2e8VNWg/Pw9jM1d9qNWHBvEHxTLtBDyFKuJEguV1KVS7vBjFznlVCnKC3AI='
-        assert (result == self.do(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAQAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAIAAAAAAAAAAAAAJxAAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAAAAAAAAAAAJxAAAAAAAAAAAAAAAAHNPhNjAAAAQEfgQzYr9yUkomEyip17e5al9JAV8puIGS7Rd8An2wdvLjnTBaelTg65mCc4HxetFW98oaMtxhk9M4kUSBrLxgM='
+        generated_result = self.do(
             setup.network,
             op=PathPayment(
                 source=self.source,
@@ -78,11 +83,12 @@ class TestOp:
                 send_max=self.amount,
                 dest_amount=self.amount,
                 path=[],
-            )))
+            ))
+        assert result == generated_result
 
     def test_manageOffer_min(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAMAAAABYmVlcgAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAFiZWVyAAAAAK2uFogrxa/78nU4lG0kBdB8JKhKz/MHOgVEGr96kkCOAAAAADuaygAABMsvAAGGoAAAAAAAAAABAAAAAAAAAAHNPhNjAAAAQCvR7B7vbXDy1ShEhYhlNzRIZRJ2DSmVhWe5kCDLWf9GTNhiSEfigaVs7UrPSeDWqPUVyzYx7Igu9JG6OL6WMwM='
-        assert (result == self.do(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAMAAAABYmVlcgAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAFiZWVyAAAAAK2uFogrxa/78nU4lG0kBdB8JKhKz/MHOgVEGr96kkCOAAAAAAAPQkAABMsvAAGGoAAAAAAAAAABAAAAAAAAAAHNPhNjAAAAQNM2RVXjN3xGRDuG1KQL0gbf1yidg33HDqRv6IVHeMlo2IurlfBUoeK2tosWIasNWpHnKHGgYo23sBEHl/nXyg0='
+        generated_result = self.do(
             setup.network,
             op=ManageOffer(
                 selling=Asset('beer', self.source),
@@ -90,85 +96,81 @@ class TestOp:
                 amount="100",
                 price=3.14159,
                 offer_id=1,
-            )))
+            ))
+        assert result == generated_result
 
     def test_createPassiveOffer_min(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAQAAAABYmVlcgAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAFiZWVyAAAAAK2uFogrxa/78nU4lG0kBdB8JKhKz/MHOgVEGr96kkCOAAAAADuaygAABMsvAAGGoAAAAAAAAAABzT4TYwAAAECvQiQXbKoZxYnF4qVL8GNBEzECgKUc0lNLJLYF/ML3mwPYkYRyldfxZ8h04P3iSjBmE+3srS05Ncajuy7+qugL'
-        assert (result == self.do(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAQAAAABYmVlcgAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAAAAFiZWVyAAAAAK2uFogrxa/78nU4lG0kBdB8JKhKz/MHOgVEGr96kkCOAAAAAAAPQkAABMsvAAGGoAAAAAAAAAABzT4TYwAAAEDI+TDE/LRjNTv0GE/habsS4UgJa+rgzvRsrtfHCTxKer0pMJPMmb9D+Up+o64P1uD9cO5oNtlxK2/BAV9O7OkH'
+        generated_result = self.do(
             setup.network,
             op=CreatePassiveOffer(
                 selling=Asset('beer', self.source),
                 buying=Asset('beer', self.dest),
                 amount="100",
                 price=3.14159,
-            )))
+            ))
+        assert result == generated_result
 
     def test_SetOptions_empty(self, setup):
         result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAc0+E2MAAABAffce5U9sUC0cmi3ecjVayerdg+btd5u7fw1XguZO5mp3EjlZwATvCGdbSQbzH2wJrddAix8cHUgvJD1DdXr8DQ=='
-        assert (result == self.do(setup.network, op=SetOptions()))
+        generated_result = self.do(setup.network, op=SetOptions())
+        assert result == generated_result
 
     def test_changeTrust_min(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAYAAAABYmVlcgAAAACtrhaIK8Wv+/J1OJRtJAXQfCSoSs/zBzoFRBq/epJAjn//////////AAAAAAAAAAHNPhNjAAAAQEMLKLk6BmEehiEqR155eZoHTMf0bFoZcsvTZpv1KDPXkOdyJZlinNR6FHv7Odk/kvxV5pYET+zqrLCJUwhcjgs='
-        assert (result == self.do(
-            setup.network, op=ChangeTrust(asset=Asset('beer', self.dest), )))
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAYAAAABYmVlcgAAAACtrhaIK8Wv+/J1OJRtJAXQfCSoSs/zBzoFRBq/epJAjgAgxJul41P3AAAAAAAAAAHNPhNjAAAAQEBZVM8z1iXurqTBMD1rz9fts1JSbUssvRGtmNxq3fYd+mQLlmMjZeutiLy/eiqMQNGEt1JuDvtriXZgsTk14gk='
+        generated_result = self.do(
+            setup.network, op=ChangeTrust(asset=Asset('beer', self.dest), ))
+        assert result == generated_result
 
     def test_allowTrust_shortAsset(self, setup):
         result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAcAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAABYmVlcgAAAAEAAAAAAAAAAc0+E2MAAABAV3Lq9RaWrhckFLidPp3WwDnGmJfY/oTQECxJqinkP0PVgS94egZt6bY9hXNWXNrLePID1XpBzVm8K6plpW6qBw=='
-        assert (result == self.do(
+        generated_result = self.do(
             setup.network,
             op=AllowTrust(
                 trustor=self.dest,
                 asset_code='beer',
                 authorize=True,
-            )))
+            ))
+        assert result == generated_result
 
     def test_allowTrust_longAsset(self, setup):
         result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAcAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAACcG9ja2V0a25pdmVzAAAAAQAAAAAAAAABzT4TYwAAAEDGsNazdiNzGOy11OwmnTjRAqZFw3IWasKUrqj7jldElyRYZYILZ56N3PFkIUQXfE4+GI6uiQ3kN8eXQFLXBVUH'
-        assert (result == self.do(
+        generated_result = self.do(
             setup.network,
             op=AllowTrust(
                 trustor=self.dest,
                 asset_code='pocketknives',
                 authorize=True,
-            )))
+            ))
+        assert result == generated_result
 
     def test_accountMerge_min(self, setup):
         result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAgAAAAAra4WiCvFr/vydTiUbSQF0HwkqErP8wc6BUQav3qSQI4AAAAAAAAAAc0+E2MAAABA0CkEVv6elPyZRDX554X2r51z3L1RFxOpdNNT4VHk8C/zi7pUPv92tJB7jZAExkCFOX0nDPYrb74RXYTzVxSZDg=='
-        assert (result == self.do(
-            setup.network, op=AccountMerge(destination=self.dest)))
+        generated_result = self.do(
+            setup.network, op=AccountMerge(destination=self.dest))
+        assert result == generated_result
 
     def test_inflation(self, setup):
         result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAkAAAAAAAAAAc0+E2MAAABAg4Tj3VkLb4/I/BjtdUEoSJRO3plqsw8fApTVazJaYlCafePH3mWcJyQefELPTRlFqbPxyTaQoRD9WK86g0CPAw=='
-        assert (result == self.do(setup.network, op=Inflation()))
+        generated_result = self.do(setup.network, op=Inflation())
+        assert result == generated_result
 
     def test_manage_data(self, setup):
         result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAoAAAAiMUtGSEU3dzhCaGFFTkFzd3dyeWFvY2NEYjZxY1Q2RGJZWQAAAAAAAQAAADhHREpWRkRHNU9DVzVQWVdIQjY0TUdUSEdGRjU3RFJSSkVEVUVGREVMMlNMTklPT05IWUpXSEEzWgAAAAAAAAABzT4TYwAAAEAwMGuJaQ2p5FGcFWms7omrCGbph64RslNqNLj5o6SfKFfKviCVbjzVm6FhNA3iOfBcAEPZgnSCcvRsirkiUvwK'
-        assert (result == self.do(
+        generated_result = self.do(
             setup.network,
             op=ManageData(
                 data_name='1KFHE7w8BhaENAswwryaoccDb6qcT6DbYY',
                 data_value=self.source,
-            )))
+            ))
+        assert result == generated_result
 
     def test_bump_sequence(self, setup):
         result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAAAAAABAAAAAAAAAAsAAAAFbsMSkgAAAAAAAAABzT4TYwAAAEBCy2YhkcyBpz3Wz3BSchLX/0R1GY5aS1LJ3VJigadB8nt6t++/4j/9YEMWWEDl3JhRTOMhPN8SSSs/zK1S1NIM'
-        assert (result == self.do(
+        generated_result = self.do(
             setup.network,
-            op=BumpSequence(bump_to=23333114514)))
-
-
-def _load_xdr_and_un_xdr_cases():
-    filename = path.join(
-        path.dirname(__file__), "txt", "xdr_for_transaction_enveloppe.txt")
-    with open(filename, "r") as f:
-        for line in f.readlines():
-            s, data = line.strip().split(",")
-            yield s, str.encode(data)
-
-
-@pytest.mark.parametrize("name, xdr_data", _load_xdr_and_un_xdr_cases())
-def test_xdr_and_un_xdr(name, xdr_data):
-    assert xdr_data == Te.from_xdr(xdr_data).xdr()
+            op=BumpSequence(bump_to=23333114514))
+        assert result == generated_result
 
 
 class TestMultiOp:
@@ -177,17 +179,17 @@ class TestMultiOp:
     accounts = [
         {
             'address':
-            'GCKMUHUBYSJNEIPMJ2ZHSXGSI7LLROFM5U43SWMRDV7J23HI63M7RW2D',
+                'GCKMUHUBYSJNEIPMJ2ZHSXGSI7LLROFM5U43SWMRDV7J23HI63M7RW2D',
             'seed': 'SDKGBZFUZZEP3QKAFNLEINQ2MPD5QZJ35ZV7YNS6XCQ4NEHI6ND3ZMWC',
         },
         {
             'address':
-            'GBG2TM6PGHAWRBVS37MBGOCQ7H7QQH7N2Y2WVUY7IMCEJ6MSF7LWQNIP',
+                'GBG2TM6PGHAWRBVS37MBGOCQ7H7QQH7N2Y2WVUY7IMCEJ6MSF7LWQNIP',
             'seed': 'SAMM4N3BI447BUSTHPGO5NRHQY2J5QWECMPVHLXHZ3UKENU52UJ7MJLQ',
         },
         {
             'address':
-            'GCQEAE6KDHPQMO3AJBRPSFV6FAPFYP27Q3EGE4PY4MZCTIV5RRA3KDBS',
+                'GCQEAE6KDHPQMO3AJBRPSFV6FAPFYP27Q3EGE4PY4MZCTIV5RRA3KDBS',
             'seed': 'SDWJCTX6T3NJ6HEPDWFPMP33M2UDBPFKUCN7BIRFQYKXQTLO7NGDEVZE',
         },
     ]
@@ -208,8 +210,8 @@ class TestMultiOp:
         return envelope_b64
 
     def test_double_create_account(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAyAAAAAAAAAACAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAlMoegcSS0iHsTrJ5XNJH1ri4rO05uVmRHX6dbOj22fgAAAAAC+vCAAAAAAAAAAAAAAAAAE2ps88xwWiGst/YEzhQ+f8IH+3WNWrTH0MERPmSL9doAAAAABfXhAAAAAAAAAAAAc0+E2MAAABAfIa9NK/HO/m2mkDAfl5XOM/cGshfsMqw0F1pa9bnBRxv368wSNodbsa22NYfES6jNidDacJkZdfumcpXLwRWDw=='
-        assert (result == self.make_envelope(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAyAAAAAAAAAACAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAlMoegcSS0iHsTrJ5XNJH1ri4rO05uVmRHX6dbOj22fgAAAAAAAMNQAAAAAAAAAAAAAAAAE2ps88xwWiGst/YEzhQ+f8IH+3WNWrTH0MERPmSL9doAAAAAAAGGoAAAAAAAAAAAc0+E2MAAABAVl+LFfja8034SDeaE5YdptrcsDmeRfd0eASPPIcjABx32Wj8pfE5cwSZcgPKStUkVfubnlwu3f034NH9IlNTBQ=='
+        generated_result = self.make_envelope(
             setup.network,
             CreateAccount(
                 destination=self.accounts[0]['address'],
@@ -219,11 +221,12 @@ class TestMultiOp:
                 destination=self.accounts[1]['address'],
                 starting_balance="40",
             ),
-        ))
+        )
+        assert result == generated_result
 
     def test_double_payment(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAyAAAAAAAAAACAAAAAAAAAAAAAAACAAAAAAAAAAEAAAAAlMoegcSS0iHsTrJ5XNJH1ri4rO05uVmRHX6dbOj22fgAAAAAAAAAAAvrwgAAAAAAAAAAAQAAAABNqbPPMcFohrLf2BM4UPn/CB/t1jVq0x9DBET5ki/XaAAAAAAAAAAAF9eEAAAAAAAAAAABzT4TYwAAAEAC/EENKQWCZFsKcNMEpWi7TVstQF0JbmBj/+QwkQXW8q/isCHX+UikrhxXJpI5NDKdagnH0godVShWxK1PENAC'
-        assert (result == self.make_envelope(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAyAAAAAAAAAACAAAAAAAAAAAAAAACAAAAAAAAAAEAAAAAlMoegcSS0iHsTrJ5XNJH1ri4rO05uVmRHX6dbOj22fgAAAAAAAAAAAADDUAAAAAAAAAAAQAAAABNqbPPMcFohrLf2BM4UPn/CB/t1jVq0x9DBET5ki/XaAAAAAAAAAAAAAYagAAAAAAAAAABzT4TYwAAAECwvAyzCkYHCGbECUBLYkNt/MhP9G4HQ8b8vYYKZ29F3BQCNLtLbAwhya4Hpftte7GgPwRLPw5fewU1px7UQcoL'
+        generated_result = self.make_envelope(
             setup.network,
             Payment(
                 destination=self.accounts[0]['address'],
@@ -235,11 +238,12 @@ class TestMultiOp:
                 asset=Asset.native(),
                 amount="40",
             ),
-        ))
+        )
+        assert result == generated_result
 
     def test_mix_1(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAADhAAAAAAAAAACAAAAAAAAAAAAAAAJAAAAAAAAAAAAAAAAlMoegcSS0iHsTrJ5XNJH1ri4rO05uVmRHX6dbOj22fgAAAAAC+vCAAAAAAAAAAABAAAAAE2ps88xwWiGst/YEzhQ+f8IH+3WNWrTH0MERPmSL9doAAAAAAAAAAAL68IAAAAAAAAAAAIAAAAAAAAAAAvrwgAAAAAAoEATyhnfBjtgSGL5Fr4oHlw/X4bIYnH44zIpor2MQbUAAAAAAAAAAAvrwgAAAAAAAAAAAAAAAAMAAAABYmVlcgAAAACUyh6BxJLSIexOsnlc0kfWuLis7Tm5WZEdfp1s6PbZ+AAAAAFiZWVyAAAAAE2ps88xwWiGst/YEzhQ+f8IH+3WNWrTH0MERPmSL9doAAAAADuaygAABMsvAAGGoAAAAAAAAAABAAAAAAAAAAQAAAABYmVlcgAAAABNqbPPMcFohrLf2BM4UPn/CB/t1jVq0x9DBET5ki/XaAAAAAFiZWVyAAAAAKBAE8oZ3wY7YEhi+Ra+KB5cP1+GyGJx+OMyKaK9jEG1AAAAADuaygAABMsvAAGGoAAAAAAAAAAFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAABYmVlcgAAAACUyh6BxJLSIexOsnlc0kfWuLis7Tm5WZEdfp1s6PbZ+H//////////AAAAAAAAAAcAAAAAlMoegcSS0iHsTrJ5XNJH1ri4rO05uVmRHX6dbOj22fgAAAABYmVlcgAAAAEAAAAAAAAACAAAAACUyh6BxJLSIexOsnlc0kfWuLis7Tm5WZEdfp1s6PbZ+AAAAAAAAAABzT4TYwAAAEAY0YGZzC1qiKatKCWaCttK1fEs3P4DpVWw2AQCdvVBS4dkCyfxu7N7tpQPEZ4WqXzAiR0D7r5L6f848pmNsgIL'
-        assert (result == self.make_envelope(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAADhAAAAAAAAAACAAAAAAAAAAAAAAAJAAAAAAAAAAAAAAAAlMoegcSS0iHsTrJ5XNJH1ri4rO05uVmRHX6dbOj22fgAAAAAAAMNQAAAAAAAAAABAAAAAE2ps88xwWiGst/YEzhQ+f8IH+3WNWrTH0MERPmSL9doAAAAAAAAAAAAAw1AAAAAAAAAAAIAAAAAAAAAAAADDUAAAAAAoEATyhnfBjtgSGL5Fr4oHlw/X4bIYnH44zIpor2MQbUAAAAAAAAAAAADDUAAAAAAAAAAAAAAAAMAAAABYmVlcgAAAACUyh6BxJLSIexOsnlc0kfWuLis7Tm5WZEdfp1s6PbZ+AAAAAFiZWVyAAAAAE2ps88xwWiGst/YEzhQ+f8IH+3WNWrTH0MERPmSL9doAAAAAAAPQkAABMsvAAGGoAAAAAAAAAABAAAAAAAAAAQAAAABYmVlcgAAAABNqbPPMcFohrLf2BM4UPn/CB/t1jVq0x9DBET5ki/XaAAAAAFiZWVyAAAAAKBAE8oZ3wY7YEhi+Ra+KB5cP1+GyGJx+OMyKaK9jEG1AAAAAAAPQkAABMsvAAGGoAAAAAAAAAAFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAABYmVlcgAAAACUyh6BxJLSIexOsnlc0kfWuLis7Tm5WZEdfp1s6PbZ+AAgxJul41P3AAAAAAAAAAcAAAAAlMoegcSS0iHsTrJ5XNJH1ri4rO05uVmRHX6dbOj22fgAAAABYmVlcgAAAAEAAAAAAAAACAAAAACUyh6BxJLSIexOsnlc0kfWuLis7Tm5WZEdfp1s6PbZ+AAAAAAAAAABzT4TYwAAAEBe61eGGg88kJsWwKEOZru5atzSpsXDZkixOj3Qy/yfh2YNKQ+1IjlSMDcwzBGpbvJmQrvBFtsUcIQVUC+LnXEK'
+        generated_result = self.make_envelope(
             setup.network,
             CreateAccount(
                 destination=self.accounts[0]['address'],
@@ -277,11 +281,12 @@ class TestMultiOp:
                 trustor=self.accounts[0]['address'],
                 asset_code='beer',
                 authorize=True,
-            ), AccountMerge(destination=self.accounts[0]['address'], )))
+            ), AccountMerge(destination=self.accounts[0]['address'], ))
+        assert result == generated_result
 
     def test_mix_2(self, setup):
-        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAABkAAAAAAAAAACAAAAAAAAAAAAAAAEAAAAAAAAAAUAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAABRVVSAAAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAjhvJvwQAAAAAAAAAAAAcAAAAA01KM3XCt1+LHD7jDTOYpe/HGKSDoQoyL1JbUOc0+E2MAAAABRVVSAAAAAAEAAAAAAAAAAQAAAACUyh6BxJLSIexOsnlc0kfWuLis7Tm5WZEdfp1s6PbZ+AAAAAFFVVIAAAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjACOG8m/BAAAAAAAAAAAAAc0+E2MAAABAKHsltQKqjdueu13k7PI7cLg4Tya2aOFH+1Sc9qeK4z0AXxropuRVHhyuriPu/ZXHIRVDvD5xQ0SmMFPVFtU0BA=='
-        assert (result == self.make_envelope(
+        result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAABkAAAAAAAAAACAAAAAAAAAAAAAAAEAAAAAAAAAAUAAAAAAAAAAAAAAAEAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAAABRVVSAAAAAADTUozdcK3X4scPuMNM5il78cYpIOhCjIvUltQ5zT4TYwAACRhOcqAAAAAAAAAAAAcAAAAA01KM3XCt1+LHD7jDTOYpe/HGKSDoQoyL1JbUOc0+E2MAAAABRVVSAAAAAAEAAAAAAAAAAQAAAACUyh6BxJLSIexOsnlc0kfWuLis7Tm5WZEdfp1s6PbZ+AAAAAFFVVIAAAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAJGE5yoAAAAAAAAAAAAc0+E2MAAABA8eoqQZLCnXlmJM0m9N/rhe7l2Fe+Q/Rvz8ooTfEtn75CGlO7B9u1dQkuZzo7YJF1/KkjJ4Fz8Va7AW3FJwe/Bw=='
+        generated_result = self.make_envelope(
             setup.network,
             SetOptions(set_flags=1),
             ChangeTrust(
@@ -292,4 +297,5 @@ class TestMultiOp:
             Payment(
                 destination=self.accounts[0]['address'],
                 asset=Asset('EUR', self.address),
-                amount="1000000000")))
+                amount="1000000000"))
+        assert result == generated_result

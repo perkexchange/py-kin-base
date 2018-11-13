@@ -11,7 +11,7 @@ from .utils import (account_xdr_object, best_rational_approximation as best_r,
                     is_valid_address, convert_hex_to_bytes)
 from .exceptions import StellarAddressInvalidError, NotValidParamError
 
-ONE = Decimal(10 ** 7)
+ONE = Decimal(10 ** 4)  # TODO: move to a config file
 
 
 class Operation(object):
@@ -99,7 +99,7 @@ class Operation(object):
         try:
             amount = int((Decimal(value) * ONE).to_integral_exact(context=Context(traps=[Inexact])))
         except decimal.Inexact:
-            raise NotValidParamError("Value of '{}' must have at most 7 digits after the decimal.".format(value))
+            raise NotValidParamError("Value of '{}' must have at most 4 digits after the decimal.".format(value))
         except decimal.InvalidOperation:
             raise NotValidParamError("Value of '{}' must represent a positive number.".format(value))
         return amount
@@ -181,7 +181,7 @@ class CreateAccount(Operation):
     Threshold: Medium
 
     :param str destination: Destination account ID to create an account for.
-    :param str starting_balance: Amount in XLM the account should be
+    :param str starting_balance: Amount in KIN the account should be
         funded for. Must be greater than the [reserve balance amount]
         (https://www.stellar.org/developers/learn/concepts/fees.html).
     :param str source: The source account for the payment. Defaults to the
@@ -308,7 +308,7 @@ class PathPayment(Operation):
     operation on Stellar's network.
 
     Sends an amount in a specific asset to a destination account through a path
-    of offers. This allows the asset sent (e.g., 450 XLM) to be different from
+    of offers. This allows the asset sent (e.g., 450 KIN) to be different from
     the asset received (e.g, 6 BTC).
 
     Threshold: Medium
@@ -415,7 +415,7 @@ class ChangeTrust(Operation):
     :param str source: The source account (defaults to transaction source).
 
     """
-    default_limit = "922337203685.4775807"
+    default_limit = "922337203685.4775"
 
     @classmethod
     def type_code(cls):
@@ -834,8 +834,8 @@ class CreatePassiveOffer(Operation):
 
     A passive offer is an offer that does not act on and take a reverse offer
     of equal price. Instead, they only take offers of lesser price. For
-    example, if an offer exists to buy 5 BTC for 30 XLM, and you make a passive
-    offer to buy 30 XLM for 5 BTC, your passive offer does not take the first
+    example, if an offer exists to buy 5 BTC for 30 KIN, and you make a passive
+    offer to buy 30 KIN for 5 BTC, your passive offer does not take the first
     offer.
 
     Note that regular offers made later than your passive offer can act on and
@@ -925,7 +925,7 @@ class AccountMerge(Operation):
     """The :class:`AccountMerge` object, which represents a
     AccountMerge operation on Stellar's network.
 
-    Transfers the native balance (the amount of XLM an account holds) to
+    Transfers the native balance (the amount of KIN an account holds) to
     another account and removes the source account from the ledger.
 
     Threshold: High

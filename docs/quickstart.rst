@@ -117,7 +117,7 @@ Now, in order to create an account, you need to run a :class:`CreateAccount
 Due to `Stellar's account minimums
 <https://www.stellar.org/developers/guides/concepts/fees.html#minimum-account-balance>`_,
 you'll need to transfer the minimum account balance from another account with
-the create account operation. As of this writing, minimum balance is ``1 XLM (2
+the create account operation. As of this writing, minimum balance is ``1 KIN (2
 x 0.5 Base Reserve)``, and is subject to change.
 
 
@@ -166,7 +166,7 @@ account of your own, here's an example of how to do so:
    # created public key). This is the destination account.
    new_account_addr = "GABRGTDZEDCQ5W663U2EI5KWRSU3EAWJCSI57H7XAMUO5BQRIGNNZGTY"
 
-   amount = '1' # Your new account minimum balance (in XLM) to transfer over
+   amount = '1' # Your new account minimum balance (in KIN) to transfer over
    # create the CreateAccount operation
    op = CreateAccount(
        destination=new_account_addr,
@@ -183,7 +183,7 @@ account of your own, here's an example of how to do so:
    # sequence = horizon.account(old_account_keypair.address()).get('sequence')
 
    # Create a transaction with our single create account operation, with the
-   # default fee of 100 stroops as of this writing (0.00001 XLM)
+   # default fee of 100 stroops as of this writing (0.00001 KIN)
    tx = Transaction(
        source=old_account_keypair.address().decode(),
        sequence=sequence,
@@ -309,7 +309,7 @@ way:
    # builder = Builder(secret=seed, network='public') for LIVENET
 
    bob_address = 'GABRGTDZEDCQ5W663U2EI5KWRSU3EAWJCSI57H7XAMUO5BQRIGNNZGTY'
-   builder.append_payment_op(bob_address, '100', 'XLM')
+   builder.append_payment_op(bob_address, '100', 'KIN')
    builder.add_text_memo('For beers') # string length <= 28 bytes
    builder.sign()
 

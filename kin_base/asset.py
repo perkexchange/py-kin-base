@@ -18,7 +18,7 @@ class Asset(object):
     :param str code: The asset code, in the formats specified in `Stellar's
         guide on assets`_.
     :param issuer: The strkey encoded issuer of the asset. Note if the
-        currency is the native currency (XLM (Lumens)), no issuer is necessary.
+        currency is the native currency (KIN (Lumens)), no issuer is necessary.
     :type issuer: str, None
 
     .. _Stellar's guide on assets:
@@ -39,7 +39,7 @@ class Asset(object):
             except StellarAddressInvalidError:
                 raise StellarAddressInvalidError('Invalid issuer account: {}'.format(issuer))
 
-        if code.lower() != 'xlm' and issuer is None:
+        if code.lower() != 'kin' and issuer is None:
             raise StellarAddressInvalidError("Issuer cannot be `None` except native asset.")
 
         self.code = code
@@ -50,7 +50,7 @@ class Asset(object):
         return self.xdr() == other.xdr()
 
     def guess_asset_type(self):
-        if self.code.lower() == 'xlm' and self.issuer is None:
+        if self.code.lower() == 'kin' and self.issuer is None:
             asset_type = 'native'
         elif len(self.code) > 4:
             asset_type = 'credit_alphanum12'
@@ -75,12 +75,12 @@ class Asset(object):
     def native():
         """Create a :class:`Asset` with the native currency.
 
-        Currently, the native currency is Stellar Lumens (XLM)
+        Currently, the native currency is Stellar Lumens (KIN)
 
         :return: A new :class:`Asset` representing the native currency on the
             Stellar network.
         """
-        return Asset("XLM")
+        return Asset("KIN")
 
     def is_native(self):
         """Return true if the :class:`Asset` is the native asset.
