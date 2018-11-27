@@ -71,7 +71,7 @@ class Transaction(object):
         if fee is not None:
             if not isinstance(fee, int):
                 raise NotValidParamError('Fee must be an integer')
-        self.fee = int(fee) if fee else self.default_fee
+        self.fee = int(fee) if fee is not None else self.default_fee
         self.operations = operations or []
         # self.time_bounds = [time_bounds['minTime'],
         #                     time_bounds['maxTime']] if time_bounds else []
