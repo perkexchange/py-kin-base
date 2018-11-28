@@ -524,6 +524,25 @@ class Horizon(object):
         endpoint = '/ledgers/{ledger_id}'.format(ledger_id=ledger_id)
         return self.query(endpoint)
 
+    def ledger_transactions(self, ledger_id, cursor=None, order='asc', limit=10):
+        """This endpoint represents all transactions that occurred in the given
+        ledger.
+
+        `GET /ledgers/{id}/transactions{?cursor,limit,order}
+        <https://www.stellar.org/developers/horizon/reference/endpoints/effects-for-ledger.html>`_
+
+        :param int ledger_id: The id of the ledger to look up.
+        :param int cursor: A paging token, specifying where to start returning records from.
+        :param str order: The order in which to return rows, "asc" or "desc".
+        :param int limit: Maximum number of records to return.
+        :return: The transactions for a single ledger.
+        :rtype: dict
+
+        """
+        endpoint = '/ledgers/{ledger_id}/transactions'.format(ledger_id=ledger_id)
+        params = self.__query_params(cursor=cursor, order=order, limit=limit)
+        return self.query(endpoint, params)
+
     def ledger_effects(self, ledger_id, cursor=None, order='asc', limit=10):
         """This endpoint represents all effects that occurred in the given
         ledger.
