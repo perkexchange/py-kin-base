@@ -13,7 +13,7 @@ with codecs.open('README.rst', encoding='utf-8') as file:
 tests_require = ['pytest', 'mock']
 
 with open('requirements.txt') as f:
-    requires = [line.split(' ')[0] for line in f]
+    requires = f.readlines()
 
 setup(
     name=package_name,
