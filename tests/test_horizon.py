@@ -8,7 +8,7 @@ from kin_base.transaction_envelope import TransactionEnvelope as Te
 
 def make_envelope(network, horizon, address, seed, *args, **kwargs):
     opts = {
-        'sequence': horizon.account(address)['sequence'],
+        'sequence': int(horizon.account(address)['sequence']) + 1,
         'fee': 100 * len(args)
     }
     for opt, value in kwargs.items():
