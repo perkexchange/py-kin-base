@@ -6,7 +6,7 @@ default: ;
 init:
 	pip install .
 	pip install -e .
-	pip install pytest-cov
+	pip install pytest-cov ply mock
 .PHONY: init
 
 start:
