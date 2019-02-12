@@ -16,7 +16,7 @@ class TestOp:
     amount = "1"
 
     def do(self, network, op):
-        tx = Transaction(self.source, sequence=1)
+        tx = Transaction(self.source, sequence=2)
         tx.add_operation(op)
         envelope = Te(tx, network_id=network)
         signer = Keypair.from_seed(self.seed)
@@ -196,7 +196,7 @@ class TestMultiOp:
     amount = "20"
 
     def make_envelope(self, network, *args, **kwargs):
-        opts = {'sequence': 1, 'fee': 100 * len(args)}
+        opts = {'sequence': 2, 'fee': 100 * len(args)}
         for opt, value in kwargs.items():
             opts[opt] = value
         tx = Transaction(self.address, **opts)

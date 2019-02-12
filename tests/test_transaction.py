@@ -32,21 +32,21 @@ class TestTx:
     def test_textMemo_ascii(self, setup):
         result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAEAAAAHdGVzdGluZwAAAAABAAAAAAAAAAkAAAAAAAAAAc0+E2MAAABAMQFOqFSB22TugUKMAyF+ReoaNe1eXUeuLgxbJ2fo/FqqSs13aszSTveEpOp+FXdYPWKnFREb6UO8lohSE5JaCQ=='
         assert (result == self.do(setup.network, {
-            'sequence': 1,
+            'sequence': 2,
             'memo': TextMemo('testing'),
         }))
 
     def test_textMemo_unicode(self, setup):
         result = b'AAAAANNSjN1wrdfixw+4w0zmKXvxxikg6EKMi9SW1DnNPhNjAAAAZAAAAAAAAAACAAAAAAAAAAEAAAAMdMSTxaF0xKvFhsSjAAAAAQAAAAAAAAAJAAAAAAAAAAHNPhNjAAAAQPbTvBNXbVRC2yLA8BFVBB1IvgIlNykIn9heLQC709Mtq1OBOj222zrF0y07Hbe90iWtjAU98bGBQVSpf8GRUQk='
         assert (result == self.do(setup.network, {
-            'sequence': 1,
+            'sequence': 2,
             'memo': TextMemo('tēštīņģ'),
         }))
 
     def test_imprecise_fee(self, setup):
         with pytest.raises(NotValidParamError):
             self.do(setup.network, {
-                'sequence': 1,
+                'sequence': 2,
                 'memo': TextMemo('testing'),
                 'fee': 100.54
             })
@@ -75,7 +75,7 @@ class TestMultiOp:
     amount = "20"
 
     def make_envelope(self, *args, **kwargs):
-        opts = {'sequence': 1, 'fee': 100 * len(args)}
+        opts = {'sequence': 2, 'fee': 100 * len(args)}
         for opt, value in kwargs.items():
             opts[opt] = value
         tx = Transaction(self.address, **opts)

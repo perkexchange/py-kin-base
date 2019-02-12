@@ -38,45 +38,18 @@ class Builder(object):
     """
 
     def __init__(self,
-                 secret=None,
-                 address=None,
-                 horizon_uri=None,
-                 network=None,
-                 sequence=None,
-                 fee=100):
-        if secret:
-            self.keypair = Keypair.from_seed(secret)
-            self.address = self.keypair.address().decode()
-        else:
-            self.keypair = None
-            self.address = None
+                 horizon,
+                 network_name,
+                 fee,
+                 secret,
+                 sequence=None):
+        # TODO: get keypair instead of seed, no need to do cryptographic operation on every build
+        self.keypair = Keypair.from_seed(secret)
+        self.address = self.keypair.address().decode()
+        self.network_name = network_name
+        self.horizon = horizon
+        self.sequence = sequence
 
-        if address is None and secret is None:
-            raise NoStellarSecretOrAddressError('Stellar secret or address is required.')
-        if address is not None and secret is None:
-            self.address = Keypair.from_address(address).address().decode()
-            self.keypair = None
-
-        if network is None:
-            self.network = 'TESTNET'
-        elif network.upper() in NETWORKS:
-            self.network = network.upper()
-        else:
-            self.network = network
-
-        if horizon_uri:
-            self.horizon = Horizon(horizon_uri)
-        elif self.network == 'PUBLIC':
-            self.horizon = Horizon(HORIZON_LIVE)
-        else:
-            self.horizon = Horizon(HORIZON_TEST)
-
-        if sequence:
-            self.sequence = int(sequence)
-        elif self.address:
-            self.sequence = self.get_sequence()
-        else:
-            self.sequence = None
         self.ops = []
         self.time_bounds = None
         self.memo = memo.NoneMemo()
@@ -622,8 +595,6 @@ class Builder(object):
         :rtype: :class:`Transaction <kin_base.transaction.Transaction>`
 
         """
-        if not self.address:
-            raise StellarAddressInvalidError('Transaction does not have any source address.')
         if not self.sequence:
             raise SequenceError('No sequence is present, maybe not funded?')
         tx = Transaction(
@@ -648,7 +619,7 @@ class Builder(object):
         """
         if self.tx is None:
             self.gen_tx()
-        te = Te(self.tx, network_id=self.network)
+        te = Te(self.tx, network_id=self.network_name)
         if self.te:
             te.signatures = self.te.signatures
         self.te = te
@@ -681,7 +652,7 @@ class Builder(object):
 
         """
         sequence = self.sequence
-        self.sequence = -1
+        self.sequence = 0
         tx_xdr = self.gen_tx().xdr()
         self.sequence = sequence
         return tx_xdr
@@ -717,15 +688,15 @@ class Builder(object):
 
         """
         te = Te.from_xdr(xdr)
-        if self.network.upper() in NETWORKS:
-            te.network_id = Network(NETWORKS[self.network]).network_id()
+        if self.network_name.upper() in NETWORKS:
+            te.network_id = Network(NETWORKS[self.network_name]).network_id()
         else:
-            te.network_id = Network(self.network).network_id()
+            te.network_id = Network(self.network_name).network_id()
         self.te = te
         self.tx = te.tx  # with a different source or not .
         self.ops = te.tx.operations
         self.address = te.tx.source
-        self.sequence = te.tx.sequence - 1
+        self.sequence = te.tx.sequence
         time_bounds_in_xdr = te.tx.time_bounds
         if time_bounds_in_xdr:
             self.time_bounds = {
@@ -785,24 +756,26 @@ class Builder(object):
         :rtype: :class:`Builder`
 
         """
-        sequence = self.sequence + 1
-        next_builder = Builder(
-            horizon_uri=self.horizon.horizon_uri,
-            address=self.address,
-            network=self.network,
-            sequence=sequence,
-            fee=self.fee)
-        next_builder.keypair = self.keypair
+        next_builder = Builder(horizon=self.horizon,
+                               network_name=self.network_name,
+                               fee=self.fee,
+                               secret=self.keypair.seed().decode(),
+                               sequence=self.sequence+1)
         return next_builder
 
-    def get_sequence(self):
-        """Get the sequence number for a given account via Horizon.
-
-        :return: The current sequence number for a given account
-        :rtype: int
+    def update_sequence(self):
         """
-        if not self.address:
-            raise StellarAddressInvalidError('No address provided.')
-
+        Update the builder with the next sequence of the account
+        """
         address = self.horizon.account(self.address)
-        return int(address.get('sequence'))
+        self.sequence = int(address.get('sequence')) + 1
+
+    def set_channel(self, channel_seed):
+        """
+        # TODO: get keypair instead of seed, no need for crypto operation if not needed
+        Set a channel to be used for this transaction
+        :param str channel_seed: Seed to use as the channel
+        """
+        self.keypair = Keypair.from_seed(channel_seed)
+        self.address = self.keypair.address().decode()
+        self.update_sequence()
