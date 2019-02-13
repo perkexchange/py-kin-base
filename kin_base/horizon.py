@@ -870,7 +870,7 @@ class Horizon(object):
 def check_horizon_reply(reply):
     if 'status' not in reply:
         return reply
-    raise HorizonError(reply, reply['status'])
+    raise HorizonError(reply)
 
 
 def horizon_testnet():

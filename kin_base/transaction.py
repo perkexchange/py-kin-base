@@ -66,7 +66,7 @@ class Transaction(object):
         assert is_valid_address(source)
 
         self.source = source
-        self.sequence = int(sequence) + 1
+        self.sequence = int(sequence)
         self.memo = memo or NoneMemo()
         if fee is not None:
             if not isinstance(fee, int):
@@ -127,7 +127,7 @@ class Transaction(object):
 
         """
         source = encode_check('account', tx_xdr_object.sourceAccount.ed25519)
-        sequence = tx_xdr_object.seqNum - 1
+        sequence = tx_xdr_object.seqNum
         time_bounds_in_xdr = tx_xdr_object.timeBounds  # TODO test
         if time_bounds_in_xdr:
             time_bounds = {
