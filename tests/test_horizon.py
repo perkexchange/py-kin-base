@@ -1,4 +1,6 @@
 # encoding: utf-8
+import pytest
+
 from kin_base.keypair import Keypair
 from kin_base.operation import *
 from kin_base.horizon import Horizon
@@ -6,9 +8,9 @@ from kin_base.transaction import Transaction
 from kin_base.transaction_envelope import TransactionEnvelope as Te
 
 
-def make_envelope(network, horizon, address, seed, *args, **kwargs):
+async def make_envelope(network, horizon, address, seed, *args, **kwargs):
     opts = {
-        'sequence': int(horizon.account(address)['sequence']) + 1,
+        'sequence': int((await horizon.account(address))['sequence']) + 1,
         'fee': 100 * len(args)
     }
     for opt, value in kwargs.items():
@@ -23,19 +25,21 @@ def make_envelope(network, horizon, address, seed, *args, **kwargs):
     return envelope_xdr
 
 
-def test_submit(setup, helpers):
+@pytest.mark.asyncio
+async def test_submit(setup, helpers, aio_session):
     kp = Keypair.random()
     address = kp.address().decode()
     seed = kp.seed()
 
-    helpers.fund_account(setup, address)
+    await helpers.fund_account(setup, address, aio_session)
 
-    horizon = Horizon(setup.horizon_endpoint_uri)
+    async with Horizon(setup.horizon_endpoint_uri) as horizon:
+        envelope_xdr = await make_envelope(setup.network, horizon, address, seed,
+                                     Payment(
+                                         destination=address,
+                                         asset=Asset.native(),
+                                         amount="0.1618"))
+        response = await horizon.submit(envelope_xdr.decode())
+        assert 'hash' in response
 
-    envelope_xdr = make_envelope(setup.network, horizon, address, seed,
-                                 Payment(
-                                     destination=address,
-                                     asset=Asset.native(),
-                                     amount="0.1618"))
-    response = horizon.submit(envelope_xdr)
-    assert 'hash' in response
+# TODO: test horizon retries once we move to response mocking

@@ -3,16 +3,13 @@ import binascii
 import warnings
 
 from .asset import Asset
-from .horizon import HORIZON_LIVE, HORIZON_TEST
-from .horizon import Horizon
 from .keypair import Keypair
 from . import memo
 from .network import NETWORKS, Network
 from . import operation
 from .transaction import Transaction
 from .transaction_envelope import TransactionEnvelope as Te
-from .exceptions import NoStellarSecretOrAddressError, StellarAddressInvalidError, SequenceError
-from .federation import federation, FederationError
+from .exceptions import SequenceError
 
 
 class Builder(object):
@@ -548,43 +545,6 @@ class Builder(object):
         self.time_bounds = time_bounds
         return self
 
-    def federation_payment(self,
-                           fed_address,
-                           amount,
-                           asset_code='KIN',
-                           asset_issuer=None,
-                           source=None,
-                           allow_http=False):
-        """Append a :class:`Payment <kin_base.operation.Payment>` operation
-        to the list of operations using federation on the destination address.
-
-        Translates the destination stellar address to an account ID via
-        :func:`federation <kin_base.federation.federation>`, before
-        creating a new payment operation via :meth:`append_payment_op`.
-
-        :param str fed_address: A Stellar Address that needs to be translated
-            into a valid account ID via federation.
-        :param str amount: The amount of the currency to send in the payment.
-        :param str asset_code: The asset code for the asset to send.
-        :param str asset_issuer: The address of the issuer of the asset.
-        :param str source: The source address of the payment.
-        :param bool allow_http: When set to `True`, connections to insecure http protocol federation servers
-            will be allowed. Must be set to `False` in production. Default: `False`.
-        :return: This builder instance.
-
-        """
-        fed_info = federation(
-            address_or_id=fed_address, fed_type='name', allow_http=allow_http)
-        if not fed_info or not fed_info.get('account_id'):
-            raise FederationError(
-                'Cannot determine Stellar Address to Account ID translation '
-                'via Federation server.')
-        self.append_payment_op(fed_info['account_id'], amount, asset_code,
-                               asset_issuer, source)
-        memo_type = fed_info.get('memo_type')
-        if memo_type is not None and memo_type in ('text', 'id', 'hash'):
-            getattr(self, 'add_' + memo_type + '_memo')(fed_info['memo'])
-
     def gen_tx(self):
         """Generate a :class:`Transaction
         <kin_base.transaction.Transaction>` object from the list of
@@ -734,7 +694,7 @@ class Builder(object):
             self.gen_te()
         self.te.sign_hashX(preimage)
 
-    def submit(self):
+    async def submit(self):
         """Submit the generated XDR object of the built transaction envelope to
         Horizon.
 
@@ -746,7 +706,7 @@ class Builder(object):
         :returns: A dict representing the JSON response from Horizon.
 
         """
-        return self.horizon.submit(self.gen_xdr())
+        return await self.horizon.submit(self.gen_xdr().decode())
 
     def next_builder(self):
         """Create a new builder based off of this one with its sequence number
@@ -763,14 +723,14 @@ class Builder(object):
                                sequence=self.sequence+1)
         return next_builder
 
-    def update_sequence(self):
+    async def update_sequence(self):
         """
         Update the builder with the next sequence of the account
         """
-        address = self.horizon.account(self.address)
+        address = await self.horizon.account(self.address)
         self.sequence = int(address.get('sequence')) + 1
 
-    def set_channel(self, channel_seed):
+    async def set_channel(self, channel_seed):
         """
         # TODO: get keypair instead of seed, no need for crypto operation if not needed
         Set a channel to be used for this transaction
@@ -778,4 +738,4 @@ class Builder(object):
         """
         self.keypair = Keypair.from_seed(channel_seed)
         self.address = self.keypair.address().decode()
-        self.update_sequence()
+        await self.update_sequence()

@@ -14,9 +14,9 @@ aiohttp = "==3.5.4"
 
 [dev-packages]
 pytest-cov = "*"
-pytest = "*"
 mock = "*"
 ply = "*"
+pytest-asyncio = "*"
 
 [requires]
 python_version = "3.7"

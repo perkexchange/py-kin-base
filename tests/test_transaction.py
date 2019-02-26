@@ -81,7 +81,7 @@ class TestMultiOp:
         tx = Transaction(self.address, **opts)
         for count, op in enumerate(args):
             tx.add_operation(op)
-        envelope = Te(tx, network_id="TESTNET")
+        envelope = Te(tx, network_id="Test SDF Network ; September 2015")
         signer = Keypair.from_seed(self.seed)
         envelope.sign(signer)
         envelope_b64 = envelope.xdr()

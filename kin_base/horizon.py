@@ -1,37 +1,56 @@
-# coding: utf-8
-import requests
-from requests.adapters import HTTPAdapter, DEFAULT_POOLSIZE
-from requests.exceptions import RequestException
-from requests.compat import urljoin
-from time import sleep
+"""Contains the horizon api abstraction"""
 
-from urllib3.exceptions import NewConnectionError
-from urllib3.util import Retry
+import asyncio
+from functools import wraps
+
+import aiohttp
+from yarl import URL
+
+#from sseclient import SSEClient  TODO: Async sse client
+
 from .version import __version__
 from .asset import Asset
 from .exceptions import HorizonError, HorizonRequestError
 
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('horizon')
 
-try:
-    from sseclient import SSEClient
-except ImportError:
-    SSEClient = None
 
-HORIZON_LIVE = "https://horizon.stellar.org"
-HORIZON_TEST = "https://horizon-testnet.stellar.org"
+HORIZON_LIVE = "https://horizon.kinfederation.com"
+HORIZON_TEST = "https://horizon-testnet.kininfrastructure.com"
 DEFAULT_REQUEST_TIMEOUT = 11  # two ledgers + 1 sec, let's retry faster and not wait 60 secs.
 DEFAULT_NUM_RETRIES = 3
 DEFAULT_BACKOFF_FACTOR = 0.5
-USER_AGENT = 'py-stellar-base-{}'.format(__version__)
+USER_AGENT = 'py-kin-base-{}'.format(__version__)
+
+
+def _retry(func):
+    """Retry the function on specific errors"""
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        self = args[0]
+        for i in range(self.num_retries + 1):
+            try:
+                return await func(*args, **kwargs)
+            except Exception as e:
+                if i == self.num_retries:
+                    raise
+                elif isinstance(e, (aiohttp.ClientConnectionError, aiohttp.ContentTypeError)):
+                    # We couldn't connect to horizon, or the response was not a valid json (not an horizon response)
+                    pass
+                else:
+                    raise
+                logger.debug('# Retry {}: {}'.format(func.__name__, i))
+                await asyncio.sleep(self.backoff_factor * i)
+
+    return wrapper
 
 
 class Horizon(object):
     def __init__(self,
                  horizon_uri=None,
-                 pool_size=DEFAULT_POOLSIZE,
+                 pool_size=None,
                  num_retries=DEFAULT_NUM_RETRIES,
                  request_timeout=DEFAULT_REQUEST_TIMEOUT,
                  backoff_factor=DEFAULT_BACKOFF_FACTOR,
@@ -58,57 +77,33 @@ class Horizon(object):
 
         """
         if horizon_uri is None:
-            self.horizon_uri = HORIZON_TEST
+            self.horizon_uri = URL(HORIZON_TEST)
         else:
-            self.horizon_uri = horizon_uri
+            self.horizon_uri = URL(horizon_uri)
 
-        self.pool_size = pool_size
         self.num_retries = num_retries
-        self.request_timeout = request_timeout
         self.backoff_factor = backoff_factor
 
-        # adding 504 to the tuple of statuses to retry
-        self.status_forcelist = tuple(Retry.RETRY_AFTER_STATUS_CODES) + (504,)
-
-        # configure standard session
-
-        # configure retry handler
-        retry = Retry(
-            total=self.num_retries,
-            backoff_factor=self.backoff_factor,
-            redirect=0,
-            status_forcelist=self.status_forcelist)
-        # init transport adapter
-        adapter = HTTPAdapter(
-            pool_connections=self.pool_size,
-            pool_maxsize=self.pool_size,
-            max_retries=retry)
-
         # init session
-        session = requests.Session()
+        if pool_size is None:
+            connector = aiohttp.TCPConnector()
+        else:
+            connector = aiohttp.TCPConnector(limit=pool_size)
+        session = aiohttp.ClientSession(headers={'User-Agent': user_agent,
+                                                 'Content-Type': 'application/x-www-form-urlencoded'},
+                                        connector=connector,
+                                        timeout=aiohttp.ClientTimeout(total=request_timeout))
 
-        # set default headers
-        session.headers.update({'User-Agent': user_agent})
-
-        session.mount('http://', adapter)
-        session.mount('https://', adapter)
         self._session = session
 
-        # configure SSE session (differs from our standard session)
+    async def __aenter__(self):
+        return self
 
-        sse_retry = Retry(
-            total=1000000, redirect=0, status_forcelist=self.status_forcelist)
-        sse_adapter = HTTPAdapter(
-            pool_connections=self.pool_size,
-            pool_maxsize=self.pool_size,
-            max_retries=sse_retry)
-        sse_session = requests.Session()
-        sse_session.headers.update({'User-Agent': user_agent})
-        sse_session.mount('http://', sse_adapter)
-        sse_session.mount('https://', sse_adapter)
-        self._sse_session = sse_session
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
 
-    def submit(self, te):
+    @_retry
+    async def submit(self, te):
         """Submit the transaction using a pooled connection, and retry on failure.
 
         `POST /transactions
@@ -122,60 +117,56 @@ class Horizon(object):
 
         """
         params = {'tx': te}
-        url = urljoin(self.horizon_uri, 'transactions/')
+        abs_url = self.horizon_uri.join(URL('/transactions'))
+        try:
+            reply = await self._post(abs_url, params)
+        except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError) as e:
+                raise HorizonRequestError(e)
 
-        # POST is not included in Retry's method_whitelist for a good reason.
-        # our custom retry mechanism follows
-        reply = None
-        retry_count = self.num_retries
-        while True:
-            try:
-                reply = self._session.post(
-                    url, data=params, timeout=self.request_timeout)
-                return check_horizon_reply(reply.json())
-            except (RequestException, NewConnectionError, ValueError) as e:
-                if reply is not None:
-                    msg = 'Horizon submit exception: {}, reply: [{}] {}'.format(
-                        str(e), reply.status_code, reply.text)
-                else:
-                    msg = 'Horizon submit exception: {}'.format(str(e))
-                logging.warning(msg)
+        return check_horizon_reply(reply)
 
-                if (reply is not None and reply.status_code not in self.status_forcelist) or retry_count <= 0:
-                    if reply is None:
-                        raise HorizonRequestError(e)
-                    raise HorizonError('Invalid horizon reply: [{}] {}'.format(
-                        reply.status_code, reply.text), reply.status_code)
-                retry_count -= 1
-                logging.warning('Submit retry attempt {}'.format(retry_count))
-                sleep(self.backoff_factor)
+    async def query(self, rel_url, params=None, sse=False):
+        """
+        Send a query to horizon
+        :param rel_url: The relative path
+        :param params: Parameters to include in the query
+        :param sse: Should SSE be used
+        :return: The response from horizon
+        """
+        abs_url = self.horizon_uri.join(rel_url)
+        try:
+            reply = await self._get(abs_url, params, sse=sse)
+        except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError) as e:
+                raise HorizonRequestError(e)
 
-    def query(self, rel_url, params=None, sse=False):
-        abs_url = urljoin(self.horizon_uri, rel_url)
-        reply = self._query(abs_url, params, sse)
         return check_horizon_reply(reply) if not sse else reply
 
-    def _query(self, url, params=None, sse=False):
-        reply = None
+    @_retry
+    async def _get(self, url, params=None, sse=False):
+        """
+        Send a get request
+        :param url: The url to send a request to
+        :param params: Parameters to include in the request
+        :param sse: Should SSE be used
+        :return: The response from the http request
+        """
         if not sse:
-            try:
-                reply = self._session.get(
-                    url, params=params, timeout=self.request_timeout)
-                return reply.json()
-            except (RequestException, NewConnectionError, ValueError) as e:
-                if reply is not None:
-                    raise HorizonError('Invalid horizon reply: [{}] {}'.format(
-                        reply.status_code, reply.text), reply.status_code)
-                else:
-                    raise HorizonRequestError(e)
+            async with self._session.get(url, params=params) as response:
+                return await response.json(encoding='utf-8')
+        return SSEClient()  # TODO: sse client
 
-        # SSE connection
-        if SSEClient is None:
-            raise ImportError('SSE not supported, missing `stellar-base-sseclient` module')
+    @_retry
+    async def _post(self, url, params=None):
+        """
+        Send a post request
+        :param url: The url to send a request to
+        :param params: Parameters to include
+        :return: The response from the http request
+        """
+        async with self._session.post(url, params=params) as response:
+            return await response.json(encoding='utf-8')
 
-        return SSEClient(url, retry=0, session=self._sse_session, connect_retry=-1, params=params)
-
-    def account(self, address):
+    async def account(self, address):
         """Returns information and links relating to a single account.
 
         `GET /accounts/{account}
@@ -186,10 +177,10 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/accounts/{account_id}'.format(account_id=address)
-        return self.query(endpoint)
+        endpoint = URL('/accounts/{account_id}'.format(account_id=address))
+        return await self.query(endpoint)
 
-    def account_data(self, address, key):
+    async def account_data(self, address, key):
         """This endpoint represents a single data associated with a given
         account.
 
@@ -202,11 +193,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/accounts/{account_id}/data/{data_key}'.format(
-            account_id=address, data_key=key)
-        return self.query(endpoint)
+        endpoint = URL('/accounts/{account_id}/data/{data_key}'.format(
+            account_id=address, data_key=key))
+        return await self.query(endpoint)
 
-    def account_effects(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_effects(self, address, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint represents all effects that changed a given account.
 
         `GET /accounts/{account}/effects{?cursor,limit,order}
@@ -223,11 +214,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/accounts/{account_id}/effects'.format(account_id=address)
+        endpoint = URL('/accounts/{account_id}/effects'.format(account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def account_offers(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_offers(self, address, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint represents all the offers a particular account makes.
 
         `GET /accounts/{account}/offers{?cursor,limit,order}
@@ -244,11 +235,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/accounts/{account_id}/offers'.format(account_id=address)
+        endpoint = URL('/accounts/{account_id}/offers'.format(account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def account_operations(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_operations(self, address, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint represents all operations that were included in valid
         transactions that affected a particular account.
 
@@ -266,12 +257,12 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/accounts/{account_id}/operations'.format(
-            account_id=address)
+        endpoint = URL('/accounts/{account_id}/operations'.format(
+            account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def account_transactions(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_transactions(self, address, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint represents all transactions that affected a given
         account.
 
@@ -289,13 +280,13 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/accounts/{account_id}/transactions'.format(
-            account_id=address)
+        endpoint = URL('/accounts/{account_id}/transactions'.format(
+            account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
 
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def account_payments(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_payments(self, address, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint responds with a collection of Payment operations where
         the given account was either the sender or receiver.
 
@@ -312,11 +303,11 @@ class Horizon(object):
         :return: The list of payments for an account in a JSON response.
         :rtype: dict
         """
-        endpoint = '/accounts/{account_id}/payments'.format(account_id=address)
+        endpoint = URL('/accounts/{account_id}/payments'.format(account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def account_trades(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_trades(self, address, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint responds with a collection of Trades where
         the given account was either the taker or the maker
 
@@ -333,11 +324,11 @@ class Horizon(object):
         :return: The list of payments for an account in a JSON response.
         :rtype: dict
         """
-        endpoint = '/accounts/{account_id}/trades'.format(account_id=address)
+        endpoint = URL('/accounts/{account_id}/trades'.format(account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def assets(self, asset_code=None, asset_issuer=None, cursor=None, order='asc', limit=10):
+    async def assets(self, asset_code=None, asset_issuer=None, cursor=None, order='asc', limit=10):
         """This endpoint represents all assets. It will give you all the assets
         in the system along with various statistics about each.
 
@@ -358,12 +349,12 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/assets'
+        endpoint = URL('/assets')
         params = self.__query_params(asset_code=asset_code, asset_issuer=asset_issuer, cursor=cursor, order=order,
                                      limit=limit)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def transactions(self, cursor=None, order='asc', limit=10, sse=False):
+    async def transactions(self, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint represents all validated transactions.
 
         `GET /transactions{?cursor,limit,order}
@@ -379,11 +370,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/transactions'
+        endpoint = URL('/transactions')
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def transaction(self, tx_hash):
+    async def transaction(self, tx_hash):
         """The transaction details endpoint provides information on a single
         transaction.
 
@@ -395,10 +386,10 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/transactions/{tx_hash}'.format(tx_hash=tx_hash)
-        return self.query(endpoint)
+        endpoint = URL('/transactions/{tx_hash}'.format(tx_hash=tx_hash))
+        return await self.query(endpoint)
 
-    def transaction_operations(self, tx_hash, cursor=None, order='asc', limit=10):
+    async def transaction_operations(self, tx_hash, cursor=None, order='asc', limit=10):
         """This endpoint represents all operations that are part of a given
         transaction.
 
@@ -413,11 +404,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/transactions/{tx_hash}/operations'.format(tx_hash=tx_hash)
+        endpoint = URL('/transactions/{tx_hash}/operations'.format(tx_hash=tx_hash))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def transaction_effects(self, tx_hash, cursor=None, order='asc', limit=10):
+    async def transaction_effects(self, tx_hash, cursor=None, order='asc', limit=10):
         """This endpoint represents all effects that occurred as a result of a
         given transaction.
 
@@ -432,11 +423,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/transactions/{tx_hash}/effects'.format(tx_hash=tx_hash)
+        endpoint = URL('/transactions/{tx_hash}/effects'.format(tx_hash=tx_hash))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def transaction_payments(self, tx_hash, cursor=None, order='asc', limit=10):
+    async def transaction_payments(self, tx_hash, cursor=None, order='asc', limit=10):
         """This endpoint represents all payment operations that are part of a
         given transaction.
 
@@ -451,11 +442,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/transactions/{tx_hash}/payments'.format(tx_hash=tx_hash)
+        endpoint = URL('/transactions/{tx_hash}/payments'.format(tx_hash=tx_hash))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def order_book(self, selling_asset_code, buying_asset_code, selling_asset_issuer=None, buying_asset_issuer=None,
+    async def order_book(self, selling_asset_code, buying_asset_code, selling_asset_issuer=None, buying_asset_issuer=None,
                    limit=10):
         """Return, for each orderbook, a summary of the orderbook and the bids
         and asks associated with that orderbook.
@@ -486,11 +477,11 @@ class Horizon(object):
             'buying_asset_code': None if buying_asset.is_native() else buying_asset.code,
             'buying_asset_issuer': buying_asset.issuer,
         }
-        endpoint = '/order_book'
+        endpoint = URL('/order_book')
         params = self.__query_params(limit=limit, **asset_params)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def ledgers(self, cursor=None, order='asc', limit=10, sse=False):
+    async def ledgers(self, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint represents all ledgers.
 
         `GET /ledgers{?cursor,limit,order}
@@ -506,11 +497,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/ledgers'
+        endpoint = URL('/ledgers')
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def ledger(self, ledger_id):
+    async def ledger(self, ledger_id):
         """The ledger details endpoint provides information on a single ledger.
 
         `GET /ledgers/{sequence}
@@ -521,10 +512,10 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/ledgers/{ledger_id}'.format(ledger_id=ledger_id)
-        return self.query(endpoint)
+        endpoint = URL('/ledgers/{ledger_id}'.format(ledger_id=ledger_id))
+        return await self.query(endpoint)
 
-    def ledger_transactions(self, ledger_id, cursor=None, order='asc', limit=10):
+    async def ledger_transactions(self, ledger_id, cursor=None, order='asc', limit=10):
         """This endpoint represents all transactions that occurred in the given
         ledger.
 
@@ -539,11 +530,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/ledgers/{ledger_id}/transactions'.format(ledger_id=ledger_id)
+        endpoint = URL('/ledgers/{ledger_id}/transactions'.format(ledger_id=ledger_id))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def ledger_effects(self, ledger_id, cursor=None, order='asc', limit=10):
+    async def ledger_effects(self, ledger_id, cursor=None, order='asc', limit=10):
         """This endpoint represents all effects that occurred in the given
         ledger.
 
@@ -558,11 +549,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/ledgers/{ledger_id}/effects'.format(ledger_id=ledger_id)
+        endpoint = URL('/ledgers/{ledger_id}/effects'.format(ledger_id=ledger_id))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def ledger_operations(self, ledger_id, cursor=None, order='asc', limit=10):
+    async def ledger_operations(self, ledger_id, cursor=None, order='asc', limit=10):
         """This endpoint returns all operations that occurred in a given
         ledger.
 
@@ -577,12 +568,12 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/ledgers/{ledger_id}/operations'.format(
-            ledger_id=ledger_id)
+        endpoint = URL('/ledgers/{ledger_id}/operations'.format(
+            ledger_id=ledger_id))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def ledger_payments(self, ledger_id, cursor=None, order='asc', limit=10):
+    async def ledger_payments(self, ledger_id, cursor=None, order='asc', limit=10):
         """This endpoint represents all payment operations that are part of a
         valid transactions in a given ledger.
 
@@ -597,30 +588,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/ledgers/{ledger_id}/payments'.format(ledger_id=ledger_id)
+        endpoint = URL('/ledgers/{ledger_id}/payments'.format(ledger_id=ledger_id))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def ledger_transactions(self, ledger_id, cursor=None, order='asc', limit=10):
-        """This endpoint represents all transactions in a given ledger.
-
-        `GET /ledgers/{id}/transactions{?cursor,limit,order}
-        <https://www.stellar.org/developers/horizon/reference/endpoints/transactions-for-ledger.html>`_
-
-        :param int ledger_id: The id of the ledger to look up.
-        :param int cursor: A paging token, specifying where to start returning records from.
-        :param str order: The order in which to return rows, "asc" or "desc".
-        :param int limit: Maximum number of records to return.
-        :return: The transactions contained in a single ledger.
-        :rtype: dict
-
-        """
-        endpoint = '/ledgers/{ledger_id}/transactions'.format(
-            ledger_id=ledger_id)
-        params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params)
-
-    def effects(self, cursor=None, order='asc', limit=10, sse=False):
+    async def effects(self, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint represents all effects.
 
         `GET /effects{?cursor,limit,order}
@@ -636,11 +608,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/effects'
+        endpoint = URL('/effects')
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def operations(self, cursor=None, order='asc', limit=10, sse=False):
+    async def operations(self, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint represents all operations that are part of validated
         transactions.
 
@@ -657,11 +629,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/operations'
+        endpoint = URL('/operations')
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def operation(self, op_id):
+    async def operation(self, op_id):
         """The operation details endpoint provides information on a single
         operation.
 
@@ -672,10 +644,10 @@ class Horizon(object):
         :return: Details on a single operation.
         :rtype: dict
         """
-        endpoint = '/operations/{op_id}'.format(op_id=op_id)
-        return self.query(endpoint)
+        endpoint = URL('/operations/{op_id}'.format(op_id=op_id))
+        return await self.query(endpoint)
 
-    def operation_effects(self, op_id, cursor=None, order='asc', limit=10):
+    async def operation_effects(self, op_id, cursor=None, order='asc', limit=10):
         """This endpoint represents all effects that occurred as a result of a
         given operation.
 
@@ -690,11 +662,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/operations/{op_id}/effects'.format(op_id=op_id)
+        endpoint = URL('/operations/{op_id}/effects'.format(op_id=op_id))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def payments(self, cursor=None, order='asc', limit=10, sse=False):
+    async def payments(self, cursor=None, order='asc', limit=10, sse=False):
         """This endpoint represents all payment operations that are part of
         validated transactions.
 
@@ -711,11 +683,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/payments'
+        endpoint = URL('/payments')
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse)
 
-    def paths(self, destination_account, destination_amount, source_account, destination_asset_code,
+    async def paths(self, destination_account, destination_amount, source_account, destination_asset_code,
               destination_asset_issuer=None):
         """Load a list of assets available to the source account id and find
         any payment paths from those source assets to the desired
@@ -747,15 +719,15 @@ class Horizon(object):
             'destination_asset_code': None if destination_asset.is_native() else destination_asset.code,
             'destination_asset_issuer': destination_asset.issuer
         }
-        endpoint = '/paths'
+        endpoint = URL('/paths')
         params = self.__query_params(destination_account=destination_account,
                                      source_account=source_account,
                                      destination_amount=destination_amount,
                                      **destination_asset_params
                                      )
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def trades(self, base_asset_code=None, counter_asset_code=None, base_asset_issuer=None, counter_asset_issuer=None,
+    async def trades(self, base_asset_code=None, counter_asset_code=None, base_asset_issuer=None, counter_asset_issuer=None,
                offer_id=None, cursor=None, order='asc', limit=10):
         """Load a list of trades, optionally filtered by an orderbook.
 
@@ -787,11 +759,11 @@ class Horizon(object):
             'counter_asset_code': None if counter_asset.is_native() else counter_asset.code,
             'counter_asset_issuer': counter_asset.issuer
         }
-        endpoint = '/trades'
+        endpoint = URL('/trades')
         params = self.__query_params(offer_id=offer_id, cursor=cursor, order=order, limit=limit, **asset_params)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def trade_aggregations(self, resolution, base_asset_code, counter_asset_code,
+    async def trade_aggregations(self, resolution, base_asset_code, counter_asset_code,
                            base_asset_issuer=None, start_time=None, end_time=None,
                            counter_asset_issuer=None, order='asc', limit=10):
         """Load a list of aggregated historical trade data, optionally filtered
@@ -825,12 +797,12 @@ class Horizon(object):
             'counter_asset_code': None if counter_asset.is_native() else counter_asset.code,
             'counter_asset_issuer': counter_asset.issuer
         }
-        endpoint = '/trade_aggregations'
+        endpoint = URL('/trade_aggregations')
         params = self.__query_params(start_time=start_time, end_time=end_time, resolution=resolution, order=order,
                                      limit=limit, **asset_params)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def offer_trades(self, offer_id, cursor=None, order='asc', limit=10):
+    async def offer_trades(self, offer_id, cursor=None, order='asc', limit=10):
         """This endpoint represents all trades for a given offer.
 
         `GET /offers/{offer_id}/trades{?cursor,limit,order}
@@ -844,11 +816,11 @@ class Horizon(object):
         :rtype: dict
 
         """
-        endpoint = '/offers/{offer_id}/trades'.format(offer_id=offer_id)
+        endpoint = URL('/offers/{offer_id}/trades'.format(offer_id=offer_id))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return self.query(endpoint, params)
+        return await self.query(endpoint, params)
 
-    def metrics(self):
+    async def metrics(self):
         """The metrics endpoint returns a host of useful data points for monitoring the health
         of the underlying Horizon process.
 
@@ -859,12 +831,17 @@ class Horizon(object):
         :rtype: dict
         """
 
-        endpoint = '/metrics'
-        return self.query(endpoint)
+        endpoint = URL('/metrics')
+        return await self.query(endpoint)
 
-    def __query_params(self, **kwargs):
+    @staticmethod
+    async def __query_params(**kwargs):
         params = {k: v for k, v in kwargs.items() if v is not None}
         return params
+
+    async def close(self):
+        """Close the connection to horizon"""
+        await self._session.__aexit__(None, None, None)
 
 
 def check_horizon_reply(reply):
@@ -873,11 +850,11 @@ def check_horizon_reply(reply):
     raise HorizonError(reply)
 
 
-def horizon_testnet():
-    """Create a Horizon instance utilizing SDF's Test Network."""
+async def horizon_testnet():
+    """Create a Horizon instance utilizing Kin's Test Network."""
     return Horizon(HORIZON_TEST)
 
 
-def horizon_livenet():
-    """Create a Horizon instance utilizing SDF's Live Network."""
+async def horizon_livenet():
+    """Create a Horizon instance utilizing Kin's Live Network."""
     return Horizon(HORIZON_LIVE)

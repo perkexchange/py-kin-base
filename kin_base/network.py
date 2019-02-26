@@ -2,8 +2,8 @@
 from .utils import xdr_hash
 
 NETWORKS = {
-    'PUBLIC': 'Public Global Stellar Network ; September 2015',
-    'TESTNET': 'Test SDF Network ; September 2015'
+    'PUBLIC': 'Kin Mainnet ; December 2018',
+    'TESTNET': 'Kin Testnet ; December 2018'
 }
 
 
