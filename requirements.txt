@@ -6,3 +6,4 @@ six==1.11.0
 toml==0.9.4
 mnemonic==0.18
 aiohttp==3.5.4
+aiohttp_sse_client==0.1.4
