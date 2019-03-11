@@ -1,12 +1,13 @@
 """Contains the horizon api abstraction"""
 
+import json
 import asyncio
 from functools import wraps
 
 import aiohttp
 from yarl import URL
 
-#from sseclient import SSEClient  TODO: Async sse client
+from aiohttp_sse_client.client import EventSource as SSEClient
 
 from .version import __version__
 from .asset import Asset
@@ -23,6 +24,7 @@ DEFAULT_REQUEST_TIMEOUT = 11  # two ledgers + 1 sec, let's retry faster and not 
 DEFAULT_NUM_RETRIES = 3
 DEFAULT_BACKOFF_FACTOR = 0.5
 USER_AGENT = 'py-kin-base-{}'.format(__version__)
+HEADERS = {'User-Agent': USER_AGENT, 'Content-Type': 'application/x-www-form-urlencoded'}
 
 
 def _retry(func):
@@ -36,8 +38,12 @@ def _retry(func):
             except Exception as e:
                 if i == self.num_retries:
                     raise
-                elif isinstance(e, (aiohttp.ClientConnectionError, aiohttp.ContentTypeError)):
-                    # We couldn't connect to horizon, or the response was not a valid json (not an horizon response)
+                elif isinstance(e, (aiohttp.ClientConnectionError, aiohttp.ContentTypeError, asyncio.TimeoutError)):
+                    """
+                    We couldn't connect to horizon/ 
+                    The response was not a valid json (not an horizon response)/
+                    Timeout
+                    """
                     pass
                 else:
                     raise
@@ -53,8 +59,7 @@ class Horizon(object):
                  pool_size=None,
                  num_retries=DEFAULT_NUM_RETRIES,
                  request_timeout=DEFAULT_REQUEST_TIMEOUT,
-                 backoff_factor=DEFAULT_BACKOFF_FACTOR,
-                 user_agent=USER_AGENT):
+                 backoff_factor=DEFAULT_BACKOFF_FACTOR):
         """The :class:`Horizon` object, which represents the interface for
         making requests to a Horizon server instance.
 
@@ -89,12 +94,18 @@ class Horizon(object):
             connector = aiohttp.TCPConnector()
         else:
             connector = aiohttp.TCPConnector(limit=pool_size)
-        session = aiohttp.ClientSession(headers={'User-Agent': user_agent,
-                                                 'Content-Type': 'application/x-www-form-urlencoded'},
+        session = aiohttp.ClientSession(headers=HEADERS,
                                         connector=connector,
                                         timeout=aiohttp.ClientTimeout(total=request_timeout))
 
         self._session = session
+        self._sse_session = None
+
+    async def _init_sse_session(self):
+        """Init the sse session """
+        if self._sse_session is None:
+            self._sse_session = aiohttp.ClientSession(headers={'User-Agent': USER_AGENT})  # No timeout, no special connector
+            # Other headers such as "Accept: text/event-stream" are added by thr SSEClient
 
     async def __aenter__(self):
         return self
@@ -125,7 +136,7 @@ class Horizon(object):
 
         return check_horizon_reply(reply)
 
-    async def query(self, rel_url, params=None, sse=False):
+    async def query(self, rel_url, params=None, sse=False, sse_timeout=None):
         """
         Send a query to horizon
         :param rel_url: The relative path
@@ -135,14 +146,14 @@ class Horizon(object):
         """
         abs_url = self.horizon_uri.join(rel_url)
         try:
-            reply = await self._get(abs_url, params, sse=sse)
+            reply = await self._get(abs_url, params, sse, sse_timeout=sse_timeout)
         except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError) as e:
                 raise HorizonRequestError(e)
 
         return check_horizon_reply(reply) if not sse else reply
 
     @_retry
-    async def _get(self, url, params=None, sse=False):
+    async def _get(self, url, params=None, sse=False, sse_timeout=None):
         """
         Send a get request
         :param url: The url to send a request to
@@ -153,7 +164,7 @@ class Horizon(object):
         if not sse:
             async with self._session.get(url, params=params) as response:
                 return await response.json(encoding='utf-8')
-        return SSEClient()  # TODO: sse client
+        return self.sse_generator(url, sse_timeout)
 
     @_retry
     async def _post(self, url, params=None):
@@ -165,6 +176,58 @@ class Horizon(object):
         """
         async with self._session.post(url, params=params) as response:
             return await response.json(encoding='utf-8')
+
+    async def sse_generator(self, url, timeout):
+        """
+        SSE generator with timeout between events
+        :param url: URL to send SSE request to
+        :param timeout: The time to wait for a a new event
+        :return: AsyncGenerator[dict]
+        """
+        async def _sse_generator():
+            """
+            Generator for sse events
+            :rtype AsyncGenerator[dict]
+            """
+            last_id = 'now'  # Start monitoring from now.
+            retry = 0.1
+            while True:
+                try:
+                    """
+                    Create a new SSEClient:
+                    Using the last id as the cursor
+                    Headers are needed because of a bug that makes "params" override the default headers
+                    """
+                    async with SSEClient(url, session=self._sse_session,
+                                         params={'cursor': last_id},
+                                         headers=HEADERS) as client:
+                        """
+                        We want to throw a TimeoutError if we didnt get any event in the last x seconds.
+                        read_timeout in aiohttp is not implemented correctly https://github.com/aio-libs/aiohttp/issues/1954
+                        So we will create our own way to do that.
+
+                        Note that the timeout starts from the first event forward. There is no until we get the first event.
+                        """
+                        async for event in client:
+                            if event.last_event_id != '':
+                                # Events that dont have an id are not useful for us (hello/byebye events)
+                                # Save the last event id and retry time
+                                last_id = event.last_event_id
+                                retry = client._reconnection_time
+                                try:
+                                    yield json.loads(event.data)
+                                except json.JSONDecodeError:
+                                    # Content was not json-decodable
+                                    pass
+                except aiohttp.ClientPayloadError:
+                    # Retry if the connection dropped after we got the initial response
+                    logger.debug('Resetting SSE connection for {} after timeout'.format(url))
+                    await asyncio.sleep(retry.total_seconds())
+
+        await self._init_sse_session()
+        gen = _sse_generator()
+        while True:
+            yield await asyncio.wait_for(gen.__anext__(), timeout)
 
     async def account(self, address):
         """Returns information and links relating to a single account.
@@ -197,7 +260,7 @@ class Horizon(object):
             account_id=address, data_key=key))
         return await self.query(endpoint)
 
-    async def account_effects(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_effects(self, address, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint represents all effects that changed a given account.
 
         `GET /accounts/{account}/effects{?cursor,limit,order}
@@ -216,9 +279,9 @@ class Horizon(object):
         """
         endpoint = URL('/accounts/{account_id}/effects'.format(account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
-    async def account_offers(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_offers(self, address, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint represents all the offers a particular account makes.
 
         `GET /accounts/{account}/offers{?cursor,limit,order}
@@ -237,9 +300,9 @@ class Horizon(object):
         """
         endpoint = URL('/accounts/{account_id}/offers'.format(account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
-    async def account_operations(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_operations(self, address, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint represents all operations that were included in valid
         transactions that affected a particular account.
 
@@ -260,9 +323,9 @@ class Horizon(object):
         endpoint = URL('/accounts/{account_id}/operations'.format(
             account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
-    async def account_transactions(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_transactions(self, address, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint represents all transactions that affected a given
         account.
 
@@ -284,9 +347,9 @@ class Horizon(object):
             account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
 
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
-    async def account_payments(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_payments(self, address, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint responds with a collection of Payment operations where
         the given account was either the sender or receiver.
 
@@ -305,9 +368,9 @@ class Horizon(object):
         """
         endpoint = URL('/accounts/{account_id}/payments'.format(account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
-    async def account_trades(self, address, cursor=None, order='asc', limit=10, sse=False):
+    async def account_trades(self, address, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint responds with a collection of Trades where
         the given account was either the taker or the maker
 
@@ -326,7 +389,7 @@ class Horizon(object):
         """
         endpoint = URL('/accounts/{account_id}/trades'.format(account_id=address))
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
     async def assets(self, asset_code=None, asset_issuer=None, cursor=None, order='asc', limit=10):
         """This endpoint represents all assets. It will give you all the assets
@@ -354,7 +417,7 @@ class Horizon(object):
                                      limit=limit)
         return await self.query(endpoint, params)
 
-    async def transactions(self, cursor=None, order='asc', limit=10, sse=False):
+    async def transactions(self, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint represents all validated transactions.
 
         `GET /transactions{?cursor,limit,order}
@@ -372,7 +435,7 @@ class Horizon(object):
         """
         endpoint = URL('/transactions')
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
     async def transaction(self, tx_hash):
         """The transaction details endpoint provides information on a single
@@ -481,7 +544,7 @@ class Horizon(object):
         params = self.__query_params(limit=limit, **asset_params)
         return await self.query(endpoint, params)
 
-    async def ledgers(self, cursor=None, order='asc', limit=10, sse=False):
+    async def ledgers(self, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint represents all ledgers.
 
         `GET /ledgers{?cursor,limit,order}
@@ -499,7 +562,7 @@ class Horizon(object):
         """
         endpoint = URL('/ledgers')
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
     async def ledger(self, ledger_id):
         """The ledger details endpoint provides information on a single ledger.
@@ -592,7 +655,7 @@ class Horizon(object):
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
         return await self.query(endpoint, params)
 
-    async def effects(self, cursor=None, order='asc', limit=10, sse=False):
+    async def effects(self, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint represents all effects.
 
         `GET /effects{?cursor,limit,order}
@@ -610,9 +673,9 @@ class Horizon(object):
         """
         endpoint = URL('/effects')
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
-    async def operations(self, cursor=None, order='asc', limit=10, sse=False):
+    async def operations(self, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint represents all operations that are part of validated
         transactions.
 
@@ -631,7 +694,7 @@ class Horizon(object):
         """
         endpoint = URL('/operations')
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
     async def operation(self, op_id):
         """The operation details endpoint provides information on a single
@@ -666,7 +729,7 @@ class Horizon(object):
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
         return await self.query(endpoint, params)
 
-    async def payments(self, cursor=None, order='asc', limit=10, sse=False):
+    async def payments(self, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
         """This endpoint represents all payment operations that are part of
         validated transactions.
 
@@ -685,7 +748,7 @@ class Horizon(object):
         """
         endpoint = URL('/payments')
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
-        return await self.query(endpoint, params, sse)
+        return await self.query(endpoint, params, sse, sse_timeout)
 
     async def paths(self, destination_account, destination_amount, source_account, destination_asset_code,
               destination_asset_issuer=None):
@@ -835,13 +898,15 @@ class Horizon(object):
         return await self.query(endpoint)
 
     @staticmethod
-    async def __query_params(**kwargs):
+    def __query_params(**kwargs):
         params = {k: v for k, v in kwargs.items() if v is not None}
         return params
 
     async def close(self):
         """Close the connection to horizon"""
         await self._session.__aexit__(None, None, None)
+        if self._sse_session is not None:
+            await self._sse_session.__aexit__(None, None, None)
 
 
 def check_horizon_reply(reply):

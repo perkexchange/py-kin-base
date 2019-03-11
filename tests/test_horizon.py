@@ -1,4 +1,5 @@
 # encoding: utf-8
+import asyncio
 import pytest
 
 from kin_base.keypair import Keypair
@@ -41,5 +42,47 @@ async def test_submit(setup, helpers, aio_session):
                                          amount="0.1618"))
         response = await horizon.submit(envelope_xdr.decode())
         assert 'hash' in response
+
+
+@pytest.mark.asyncio
+async def test_sse(setup, helpers, aio_session):
+    kp = Keypair.random()
+    address = kp.address().decode()
+
+    events = []
+    async def sse_handler(events):
+        async with Horizon(setup.horizon_endpoint_uri) as horizon:
+            async for event in await horizon.account_transactions('GA3FLH3EVYHZUHTPQZU63JPX7ECJQL2XZFCMALPCLFYMSYC4JKVLAJWM',
+                                                            sse=True):
+                events.append(event)
+                break
+    handler = asyncio.create_task(sse_handler(events))
+    await helpers.fund_account(setup, address, aio_session)
+    await asyncio.sleep(5)
+    assert len(events) == 1
+
+
+@pytest.mark.asyncio
+async def test_sse_event_timeout(setup, helpers, aio_session):
+    kp = Keypair.random()
+    address = kp.address().decode()
+
+    events = []
+
+    async def sse_handler(events):
+        async with Horizon(setup.horizon_endpoint_uri) as horizon:
+            async for event in await horizon.account_transactions(
+                    'GA3FLH3EVYHZUHTPQZU63JPX7ECJQL2XZFCMALPCLFYMSYC4JKVLAJWM',
+                    sse=True, sse_timeout=15):
+                events.append(event)
+
+    handler = asyncio.create_task(sse_handler(events))
+    await helpers.fund_account(setup, address, aio_session)
+    await asyncio.sleep(5)
+    assert len(events) == 1
+    await asyncio.sleep(20)
+    # Make sure that the sse generator raised timeout error
+    with pytest.raises(asyncio.TimeoutError):
+        raise handler.exception()
 
 # TODO: test horizon retries once we move to response mocking
