@@ -14,6 +14,7 @@ from .asset import Asset
 from .exceptions import HorizonError, HorizonRequestError
 
 import logging
+from typing import Union, Optional, AsyncGenerator
 
 logger = logging.getLogger('horizon')
 
@@ -55,11 +56,11 @@ def _retry(func):
 
 class Horizon(object):
     def __init__(self,
-                 horizon_uri=None,
-                 pool_size=None,
-                 num_retries=DEFAULT_NUM_RETRIES,
-                 request_timeout=DEFAULT_REQUEST_TIMEOUT,
-                 backoff_factor=DEFAULT_BACKOFF_FACTOR):
+                 horizon_uri: Optional[str] = None,
+                 pool_size: Optional[int] = None,
+                 num_retries: Optional[int] = DEFAULT_NUM_RETRIES,
+                 request_timeout: Optional[Union[int, None]] = DEFAULT_REQUEST_TIMEOUT,
+                 backoff_factor: Optional[float] = DEFAULT_BACKOFF_FACTOR):
         """The :class:`Horizon` object, which represents the interface for
         making requests to a Horizon server instance.
 
@@ -73,12 +74,11 @@ class Horizon(object):
         error or a valid response. Any other errors however are raised by this
         class.
 
-        :param str horizon_uri: The horizon base URL
-        :param int request_timeout: The timeout for all requests.
-        :param int pool_size: persistent connection to Horizon and connection pool
-        :param int num_retries: configurable request retry functionality
-        :param float backoff_factor: a backoff factor to apply between attempts after the second try
-        :param str user_agent: String representing the user-agent you want, such as "py-stellar-base"
+        :param horizon_uri: The horizon base URL
+        :param request_timeout: The timeout for all requests.
+        :param pool_size: persistent connection to Horizon and connection pool
+        :param num_retries: configurable request retry functionality
+        :param backoff_factor: a backoff factor to apply between attempts after the second try
 
         """
         if horizon_uri is None:
@@ -101,30 +101,29 @@ class Horizon(object):
         self._session = session
         self._sse_session = None
 
-    async def _init_sse_session(self):
+    async def _init_sse_session(self) -> None:
         """Init the sse session """
         if self._sse_session is None:
             self._sse_session = aiohttp.ClientSession(headers={'User-Agent': USER_AGENT})  # No timeout, no special connector
             # Other headers such as "Accept: text/event-stream" are added by thr SSEClient
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> 'Horizon':
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.close()
 
     @_retry
-    async def submit(self, te):
+    async def submit(self, te: str) -> dict:
         """Submit the transaction using a pooled connection, and retry on failure.
 
         `POST /transactions
         <https://www.stellar.org/developers/horizon/reference/endpoints/transactions-create.html>`_
 
         Uses form-encoded data to send over to Horizon.
-
+        :param te: The transaction envelop encoded in base64
         :return: The JSON response indicating the success/failure of the
             submitted transaction.
-        :rtype: dict
 
         """
         params = {'tx': te}
@@ -136,12 +135,14 @@ class Horizon(object):
 
         return check_horizon_reply(reply)
 
-    async def query(self, rel_url, params=None, sse=False, sse_timeout=None):
+    async def query(self, rel_url: URL, params: Optional[dict] = None, sse: Optional[bool] = False,
+                    sse_timeout: Optional[Union[float, None]] = None) -> Union[dict, AsyncGenerator]:
         """
         Send a query to horizon
         :param rel_url: The relative path
         :param params: Parameters to include in the query
         :param sse: Should SSE be used
+        :param sse_timeout: How long to wait for a new sse event
         :return: The response from horizon
         """
         abs_url = self.horizon_uri.join(rel_url)
@@ -153,12 +154,14 @@ class Horizon(object):
         return check_horizon_reply(reply) if not sse else reply
 
     @_retry
-    async def _get(self, url, params=None, sse=False, sse_timeout=None):
+    async def _get(self, url: URL, params: Optional[dict] = None, sse: Optional[bool] = False,
+                    sse_timeout: Optional[Union[float, None]] = None) -> Union[dict, AsyncGenerator]:
         """
         Send a get request
         :param url: The url to send a request to
         :param params: Parameters to include in the request
         :param sse: Should SSE be used
+        :param sse_timeout: How long to wait for a new sse event
         :return: The response from the http request
         """
         if not sse:
@@ -167,7 +170,7 @@ class Horizon(object):
         return self.sse_generator(url, sse_timeout)
 
     @_retry
-    async def _post(self, url, params=None):
+    async def _post(self, url: URL, params: Optional[dict] = None) -> dict:
         """
         Send a post request
         :param url: The url to send a request to
@@ -177,14 +180,14 @@ class Horizon(object):
         async with self._session.post(url, params=params) as response:
             return await response.json(encoding='utf-8')
 
-    async def sse_generator(self, url, timeout):
+    async def sse_generator(self, url: Union[str, URL], timeout: Union[float, None]) -> AsyncGenerator:
         """
         SSE generator with timeout between events
         :param url: URL to send SSE request to
         :param timeout: The time to wait for a a new event
         :return: AsyncGenerator[dict]
         """
-        async def _sse_generator():
+        async def _sse_generator() -> AsyncGenerator:
             """
             Generator for sse events
             :rtype AsyncGenerator[dict]
@@ -229,13 +232,13 @@ class Horizon(object):
         while True:
             yield await asyncio.wait_for(gen.__anext__(), timeout)
 
-    async def account(self, address):
+    async def account(self, address: str) -> dict:
         """Returns information and links relating to a single account.
 
         `GET /accounts/{account}
         <https://www.stellar.org/developers/horizon/reference/endpoints/accounts-single.html>`_
 
-        :param str address: The account ID to retrieve details about.
+        :param address: The account ID to retrieve details about.
         :return: The account details in a JSON response.
         :rtype: dict
 
@@ -325,20 +328,21 @@ class Horizon(object):
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
         return await self.query(endpoint, params, sse, sse_timeout)
 
-    async def account_transactions(self, address, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
+    async def account_transactions(self, address: str, cursor: Optional[int] = None, order: str = 'asc', limit: Optional[int] = 10, sse: Optional[bool] = False,
+                                   sse_timeout: Optional[Union[float, None]] = None) -> Union[dict, AsyncGenerator]:
         """This endpoint represents all transactions that affected a given
         account.
 
         `GET /accounts/{account_id}/transactions{?cursor,limit,order}
         <https://www.stellar.org/developers/horizon/reference/endpoints/transactions-for-account.html>`_
 
-        :param str address: The account ID to list transactions from.
+        :param address: The account ID to list transactions from.
         :param cursor: A paging token, specifying where to start returning records from.
             When streaming this can be set to "now" to stream object created since your request time.
-        :type cursor: int, str
-        :param str order: The order in which to return rows, "asc" or "desc".
-        :param int limit: Maximum number of records to return.
-        :param bool sse: Use server side events for streaming responses.
+        :param order: The order in which to return rows, "asc" or "desc".
+        :param limit: Maximum number of records to return.
+        :param sse: Use server side events for streaming responses.
+        :param sse_timeout: How long to wait between events
         :return: The list of transactions for an account in a JSON response.
         :rtype: dict
 
@@ -349,20 +353,21 @@ class Horizon(object):
 
         return await self.query(endpoint, params, sse, sse_timeout)
 
-    async def account_payments(self, address, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
+    async def account_payments(self, address: str, cursor: Optional[int] = None, order: str = 'asc', limit: Optional[int] = 10, sse: Optional[bool] = False,
+                               sse_timeout: Optional[Union[float, None]] = None) -> Union[dict, AsyncGenerator]:
         """This endpoint responds with a collection of Payment operations where
         the given account was either the sender or receiver.
 
         `GET /accounts/{id}/payments{?cursor,limit,order}
         <https://www.stellar.org/developers/horizon/reference/endpoints/payments-for-account.html>`_
 
-        :param str address: The account ID to list payments to/from.
+        :param address: The account ID to list payments to/from.
         :param cursor: A paging token, specifying where to start returning records from.
             When streaming this can be set to "now" to stream object created since your request time.
-        :type cursor: int, str
-        :param str order: The order in which to return rows, "asc" or "desc".
-        :param int limit: Maximum number of records to return.
-        :param bool sse: Use server side events for streaming responses.
+        :param order: The order in which to return rows, "asc" or "desc".
+        :param limit: Maximum number of records to return.
+        :param sse: Use server side events for streaming responses.
+        :param sse_timeout: How long to wait between events
         :return: The list of payments for an account in a JSON response.
         :rtype: dict
         """
@@ -417,7 +422,8 @@ class Horizon(object):
                                      limit=limit)
         return await self.query(endpoint, params)
 
-    async def transactions(self, cursor=None, order='asc', limit=10, sse=False, sse_timeout=None):
+    async def transactions(self, cursor: Optional[int] = None, order: str = 'asc', limit: Optional[int] = 10, sse: Optional[bool] = False,
+                           sse_timeout: Optional[Union[float, None]] = None) -> Union[dict, AsyncGenerator]:
         """This endpoint represents all validated transactions.
 
         `GET /transactions{?cursor,limit,order}
@@ -429,6 +435,7 @@ class Horizon(object):
         :param str order: The order in which to return rows, "asc" or "desc".
         :param int limit: Maximum number of records to return.
         :param bool sse: Use server side events for streaming responses.
+        :param sse_timeout: How long to wait between events
         :return: The list of all transactions
         :rtype: dict
 
@@ -437,14 +444,14 @@ class Horizon(object):
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
         return await self.query(endpoint, params, sse, sse_timeout)
 
-    async def transaction(self, tx_hash):
+    async def transaction(self, tx_hash: str) -> dict:
         """The transaction details endpoint provides information on a single
         transaction.
 
         `GET /transactions/{hash}
         <https://www.stellar.org/developers/horizon/reference/endpoints/transactions-single.html>`_
 
-        :param str tx_hash: The hex-encoded transaction hash.
+        :param tx_hash: The hex-encoded transaction hash.
         :return: A single transaction's details.
         :rtype: dict
 
@@ -564,13 +571,13 @@ class Horizon(object):
         params = self.__query_params(cursor=cursor, order=order, limit=limit)
         return await self.query(endpoint, params, sse, sse_timeout)
 
-    async def ledger(self, ledger_id):
+    async def ledger(self, ledger_id: int) -> dict:
         """The ledger details endpoint provides information on a single ledger.
 
         `GET /ledgers/{sequence}
         <https://www.stellar.org/developers/horizon/reference/endpoints/ledgers-single.html>`_
 
-        :param int ledger_id: The id of the ledger to look up.
+        :param ledger_id: The id of the ledger to look up.
         :return: The details of a single ledger.
         :rtype: dict
 
@@ -898,28 +905,28 @@ class Horizon(object):
         return await self.query(endpoint)
 
     @staticmethod
-    def __query_params(**kwargs):
+    def __query_params(**kwargs) -> Union[dict, None]:
         params = {k: v for k, v in kwargs.items() if v is not None}
         return params
 
-    async def close(self):
+    async def close(self) -> None:
         """Close the connection to horizon"""
         await self._session.__aexit__(None, None, None)
         if self._sse_session is not None:
             await self._sse_session.__aexit__(None, None, None)
 
 
-def check_horizon_reply(reply):
+def check_horizon_reply(reply: dict) -> dict:
     if 'status' not in reply:
         return reply
     raise HorizonError(reply)
 
 
-async def horizon_testnet():
+async def horizon_testnet() -> 'Horizon':
     """Create a Horizon instance utilizing Kin's Test Network."""
     return Horizon(HORIZON_TEST)
 
 
-async def horizon_livenet():
+async def horizon_livenet() -> 'Horizon':
     """Create a Horizon instance utilizing Kin's Live Network."""
     return Horizon(HORIZON_LIVE)

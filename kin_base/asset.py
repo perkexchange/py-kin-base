@@ -8,7 +8,7 @@ from .utils import account_xdr_object, encode_check, is_valid_address
 from .stellarxdr import Xdr
 
 
-class Asset(object):
+class Asset:
     """The :class:`Asset` object, which represents an asset and its
     corresponding issuer on the Stellar network.
 
@@ -28,7 +28,7 @@ class Asset(object):
 
     _ASSET_CODE_RE = re.compile(r'^[a-zA-Z0-9]{1,12}$')
 
-    def __init__(self, code, issuer=None):
+    def __init__(self, code: str, issuer: str = None):
         if not self._ASSET_CODE_RE.match(code):
             raise AssetCodeInvalidError("Asset code is invalid (alphanumeric, 12 "
                                         "characters max).")
@@ -122,7 +122,7 @@ class Asset(object):
         return base64.b64encode(asset.get_buffer())
 
     @classmethod
-    def from_xdr_object(cls, asset_xdr_object):
+    def from_xdr_object(cls, asset_xdr_object: Xdr.types.Asset):
         """Create a :class:`Asset` from an XDR Asset object.
 
         :param asset_xdr_object: The XDR Asset object.
@@ -144,7 +144,7 @@ class Asset(object):
         return cls(code, issuer)
 
     @classmethod
-    def from_xdr(cls, xdr):
+    def from_xdr(cls, xdr: bytes):
         """Create an :class:`Asset` object from its base64 encoded XDR
         representation.
 

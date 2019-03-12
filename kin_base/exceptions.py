@@ -68,7 +68,7 @@ class HorizonError(StellarError):
     Stellar Horizon.
 
     """
-    def __init__(self, msg):
+    def __init__(self, msg: dict):
         super(HorizonError, self).__init__(msg)
         for key, value in msg.items():
             setattr(self, key, value)

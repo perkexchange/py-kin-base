@@ -10,36 +10,40 @@ from . import operation
 from .transaction import Transaction
 from .transaction_envelope import TransactionEnvelope as Te
 from .exceptions import SequenceError
+from .horizon import Horizon
+from .operation import Operation
+
+from typing import Union, Optional, TypeVar
+
+T = TypeVar('T', bound='Builder')
 
 
-class Builder(object):
+class Builder:
     """The :class:`Builder` object, which uses the builder pattern to create
     a list of operations in a :class:`Transaction`, ultimately to be submitted
     as a :class:`TransactionEnvelope` to the network via Horizon (see
     :class:`Horizon`).
 
-    :param str secret: The base32 secret seed for the source address.
-    :param str address: The base32 source address.
-    :param str horizon_uri: The horizon instance to use for submitting the created
+    :param secret: The base32 secret seed for the source address.
+    :param horizon: The horizon instance to use for submitting the created
         transaction.
-    :param str network: The network to connect to for verifying and retrieving
+    :param network_name: The network to connect to for verifying and retrieving
         additional attributes from. 'PUBLIC' is an alias for 'Public Global Stellar Network ; September 2015',
         'TESTNET' is an alias for 'Test SDF Network ; September 2015'. Defaults to TESTNET.
     :param sequence: The sequence number to use for submitting this
         transaction with (must be the *current* sequence number of the source
         account)
-    :type sequence: int, str
-    :param int fee: The network base fee is currently set to
+    :param fee: The network base fee is currently set to
         100 stroops (0.00001 lumens). Transaction fee is equal to base fee
         times number of operations in this transaction.
     """
 
     def __init__(self,
-                 horizon,
-                 network_name,
-                 fee,
-                 secret,
-                 sequence=None):
+                 horizon: Horizon,
+                 network_name: str,
+                 fee: int,
+                 secret: str,
+                 sequence: Optional[Union[int, str]] = None):
         # TODO: get keypair instead of seed, no need to do cryptographic operation on every build
         self.keypair = Keypair.from_seed(secret)
         self.address = self.keypair.address().decode()
@@ -54,7 +58,7 @@ class Builder(object):
         self.tx = None
         self.te = None
 
-    def append_op(self, operation):
+    def append_op(self, operation: Operation) -> 'Builder':
         """Append an :class:`Operation <kin_base.operation.Operation>` to
         the list of operations.
 
@@ -62,7 +66,6 @@ class Builder(object):
         operations of this :class:`Builder` instance.
 
         :param operation: The operation to append to the list of operations.
-        :type operation: :class:`Operation`
         :return: This builder instance.
 
         """
@@ -71,17 +74,17 @@ class Builder(object):
         return self
 
     def append_create_account_op(self,
-                                 destination,
-                                 starting_balance,
-                                 source=None):
+                                 destination: str,
+                                 starting_balance: str,
+                                 source: Optional[str] = None) -> 'Builder':
         """Append a :class:`CreateAccount
         <kin_base.operation.CreateAccount>` operation to the list of
         operations.
 
-        :param str destination: Account address that is created and funded.
-        :param str starting_balance: Amount of KIN to send to the newly created
+        :param destination: Account address that is created and funded.
+        :param starting_balance: Amount of KIN to send to the newly created
             account. This KIN comes from the source account.
-        :param str source: The source address to deduct funds from to fund the
+        :param source: The source address to deduct funds from to fund the
             new account.
         :return: This builder instance.
 
@@ -108,14 +111,15 @@ class Builder(object):
 
         return self.append_change_trust_op(asset_code=code, asset_issuer=destination, limit=limit, source=source)
 
-    def append_change_trust_op(self, asset_code, asset_issuer, limit=None, source=None):
+    def append_change_trust_op(self, asset_code: str, asset_issuer: str, limit: Optional[str] = None,
+                               source: Optional[str] = None) -> 'Builder':
         """Append a :class:`ChangeTrust <kin_base.operation.ChangeTrust>`
         operation to the list of operations.
 
-        :param str asset_issuer: The issuer address for the asset.
-        :param str asset_code: The asset code for the asset.
-        :param str limit: The limit of the new trustline.
-        :param str source: The source address to add the trustline to.
+        :param asset_issuer: The issuer address for the asset.
+        :param asset_code: The asset code for the asset.
+        :param limit: The limit of the new trustline.
+        :param source: The source address to add the trustline to.
         :return: This builder instance.
 
         """
@@ -124,20 +128,19 @@ class Builder(object):
         return self.append_op(op)
 
     def append_payment_op(self,
-                          destination,
-                          amount,
-                          asset_code='KIN',
-                          asset_issuer=None,
-                          source=None):
+                          destination: str,
+                          amount: str,
+                          asset_code: Optional[str] = 'KIN',
+                          asset_issuer: Optional[str] = None,
+                          source: Optional[str] = None) -> 'Builder':
         """Append a :class:`Payment <kin_base.operation.Payment>` operation
         to the list of operations.
 
-        :param str destination: Account address that receives the payment.
-        :param str amount: The amount of the currency to send in the payment.
-        :param str asset_code: The asset code for the asset to send.
+        :param destination: Account address that receives the payment.
+        :param amount: The amount of the currency to send in the payment.
+        :param asset_code: The asset code for the asset to send.
         :param asset_issuer: The address of the issuer of the asset.
-        :type asset_issuer: str, None
-        :param str source: The source address of the payment.
+        :param source: The source address of the payment.
         :return: This builder instance.
 
         """
@@ -216,65 +219,64 @@ class Builder(object):
         return self.append_op(op)
 
     def append_set_options_op(self,
-                              inflation_dest=None,
-                              clear_flags=None,
-                              set_flags=None,
-                              master_weight=None,
-                              low_threshold=None,
-                              med_threshold=None,
-                              high_threshold=None,
-                              home_domain=None,
-                              signer_address=None,
-                              signer_type=None,
-                              signer_weight=None,
-                              source=None):
+                              inflation_dest: Optional[str] = None,
+                              clear_flags: Optional[int] = None,
+                              set_flags: Optional[int] = None,
+                              master_weight: Optional[int] = None,
+                              low_threshold: Optional[int] = None,
+                              med_threshold: Optional[int] = None,
+                              high_threshold: Optional[int] = None,
+                              home_domain: Optional[str] = None,
+                              signer_address: Optional[str] = None,
+                              signer_type: Optional[str] = None,
+                              signer_weight: Optional[int] = None,
+                              source: Optional[str] = None) -> 'Builder':
         """Append a :class:`SetOptions <kin_base.operation.SetOptions>`
         operation to the list of operations.
 
         .. _Accounts:
             https://www.stellar.org/developers/guides/concepts/accounts.html
 
-        :param str inflation_dest: The address in which to send inflation to on
+        :param inflation_dest: The address in which to send inflation to on
             an :class:`Inflation <kin_base.operation.Inflation>` operation.
-        :param int clear_flags: Indicates which flags to clear. For details
+        :param clear_flags: Indicates which flags to clear. For details
             about the flags, please refer to Stellar's documentation on
             `Accounts`_. The bit mask integer subtracts from the existing flags
             of the account. This allows for setting specific bits without
             knowledge of existing flags.
-        :param int set_flags: Indicates which flags to set. For details about
+        :param set_flags: Indicates which flags to set. For details about
             the flags, please refer to Stellar's documentation on `Accounts`_.
             The bit mask integer adds onto the existing flags of the account.
             This allows for setting specific bits without knowledge of existing
             flags.
-        :param int master_weight: Weight of the master key. This account may
+        :param master_weight: Weight of the master key. This account may
             also add other keys with which to sign transactions using the
             signer param.
-        :param int low_threshold: A number from 0-255 representing the
+        :param low_threshold: A number from 0-255 representing the
             threshold this account sets on all operations it performs that have
             a `low threshold
             <https://www.stellar.org/developers/guides/concepts/multi-sig.html>`_.
-        :param int med_threshold: A number from 0-255 representing the
+        :param med_threshold: A number from 0-255 representing the
             threshold this account sets on all operations it performs that have
             a `medium threshold
             <https://www.stellar.org/developers/guides/concepts/multi-sig.html>`_.
-        :param int high_threshold: A number from 0-255 representing the
+        :param high_threshold: A number from 0-255 representing the
             threshold this account sets on all operations it performs that have
             a `high threshold
             <https://www.stellar.org/developers/guides/concepts/multi-sig.html>`_.
-        :param str home_domain: Sets the home domain of an account. See
+        :param home_domain: Sets the home domain of an account. See
             Stellar's documentation on `Federation
             <https://www.stellar.org/developers/guides/concepts/federation.html>`_.
         :param signer_address: The address of the new signer to add to the
             source account.
-        :type signer_address: str, bytes
-        :param str signer_type: The type of signer to add to the account. Must
+        :param signer_type: The type of signer to add to the account. Must
             be in ('ed25519PublicKey', 'hashX', 'preAuthTx'). See Stellar's
             documentation for `Multi-Sign
             <https://www.stellar.org/developers/guides/concepts/multi-sig.html>`_
             for more information.
-        :param int signer_weight: The weight of the signer. If the weight is 0,
+        :param signer_weight: The weight of the signer. If the weight is 0,
             the signer will be deleted.
-        :param str source: The source address for which options are being set.
+        :param source: The source address for which options are being set.
         :return: This builder instance.
 
         """
@@ -436,18 +438,18 @@ class Builder(object):
         op = operation.Inflation(source)
         return self.append_op(op)
 
-    def append_manage_data_op(self, data_name, data_value, source=None):
+    def append_manage_data_op(self, data_name: str, data_value: Union[str, bytes, None],
+                              source: Optional[str] = None) -> 'Builder':
         """Append a :class:`ManageData <kin_base.operation.ManageData>`
         operation to the list of operations.
 
-        :param str data_name: String up to 64 bytes long. If this is a new Name
+        :param data_name: String up to 64 bytes long. If this is a new Name
             it will add the given name/value pair to the account. If this Name
             is already present then the associated value will be modified.
         :param data_value: If not present then the existing
             Name will be deleted. If present then this value will be set in the
             DataEntry. Up to 64 bytes long.
-        :type data_value: str, bytes, None
-        :param str source: The source account on which data is being managed.
+        :param source: The source account on which data is being managed.
             operation.
         :return: This builder instance.
 
@@ -481,11 +483,11 @@ class Builder(object):
         self.memo = memo
         return self
 
-    def add_text_memo(self, memo_text):
+    def add_text_memo(self, memo_text: str):
         """Set the memo for the transaction to a new :class:`TextMemo
         <kin_base.memo.TextMemo>`.
 
-        :param str memo_text: The text for the memo to add.
+        :param memo_text: The text for the memo to add.
         :return: This builder instance.
 
         """
@@ -625,7 +627,7 @@ class Builder(object):
         """
         return self.gen_te().hash_meta()
 
-    def hash_hex(self):
+    def hash_hex(self) -> str:
         """Return a hex encoded hash for this transaction.
 
         :return: A hex encoded hash for this transaction.
@@ -633,7 +635,7 @@ class Builder(object):
         """
         return binascii.hexlify(self.hash()).decode()
 
-    def import_from_xdr(self, xdr):
+    def import_from_xdr(self, xdr: Union[str, bytes]) -> 'Builder':
         """Create a :class:`TransactionEnvelope
         <kin_base.transaction_envelope.TransactionEnvelope>` via an XDR
         object.
@@ -644,7 +646,6 @@ class Builder(object):
 
         :param xdr: The XDR object representing the transaction envelope to
             which this builder is setting its state to.
-        :type xdr: bytes, str
 
         """
         te = Te.from_xdr(xdr)
@@ -668,12 +669,12 @@ class Builder(object):
         self.memo = te.tx.memo
         return self
 
-    def sign(self, secret=None):
+    def sign(self, secret: Optional[str] = None) -> None:
         """Sign the generated :class:`TransactionEnvelope
         <kin_base.transaction_envelope.TransactionEnvelope>` from the list
         of this builder's operations.
 
-        :param str secret: The secret seed to use if a key pair or secret was
+        :param secret: The secret seed to use if a key pair or secret was
             not provided when this class was originaly instantiated, or if
             another key is being utilized to sign the transaction envelope.
 
@@ -694,7 +695,7 @@ class Builder(object):
             self.gen_te()
         self.te.sign_hashX(preimage)
 
-    async def submit(self):
+    async def submit(self) -> dict:
         """Submit the generated XDR object of the built transaction envelope to
         Horizon.
 
@@ -723,18 +724,18 @@ class Builder(object):
                                sequence=self.sequence+1)
         return next_builder
 
-    async def update_sequence(self):
+    async def update_sequence(self) -> None:
         """
         Update the builder with the next sequence of the account
         """
         address = await self.horizon.account(self.address)
         self.sequence = int(address.get('sequence')) + 1
 
-    async def set_channel(self, channel_seed):
+    async def set_channel(self, channel_seed: str) -> None:
         """
         # TODO: get keypair instead of seed, no need for crypto operation if not needed
         Set a channel to be used for this transaction
-        :param str channel_seed: Seed to use as the channel
+        :param channel_seed: Seed to use as the channel
         """
         self.keypair = Keypair.from_seed(channel_seed)
         self.address = self.keypair.address().decode()

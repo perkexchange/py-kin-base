@@ -13,7 +13,7 @@ if sys.version_info.major == 3:
 
 
 @six.add_metaclass(abc.ABCMeta)
-class Memo(object):
+class Memo:
     """The :class:`Memo` object, which represents the base class for memos for
     use with Stellar transactions.
 
@@ -47,7 +47,7 @@ class Memo(object):
     def from_xdr_object(cls, xdr_obj):
         return cls(xdr_obj.switch)
 
-    def xdr(self):
+    def xdr(self) -> bytes:
         """Packs and base64 encodes this :class:`Memo` as an XDR string."""
         x = Xdr.StellarXDRPacker()
         x.pack_Memo(self.to_xdr_object())
@@ -61,10 +61,10 @@ class NoneMemo(Memo):
     """The :class:`NoneMemo`, which represents no memo for a transaction."""
 
     @classmethod
-    def from_xdr_object(cls, _xdr_obj):
+    def from_xdr_object(cls, _xdr_obj: Xdr.types.Memo) -> 'NoneMemo':
         return cls()
 
-    def to_xdr_object(self):
+    def to_xdr_object(self) -> Xdr.types.Memo:
         """Creates an XDR Memo object for a transaction with no memo."""
         return Xdr.types.Memo(type=Xdr.const.MEMO_NONE)
 
@@ -72,12 +72,12 @@ class NoneMemo(Memo):
 class TextMemo(Memo):
     """The :class:`TextMemo`, which represents MEMO_TEXT in a transaction.
 
-    :param str text: A string encoded using either ASCII or UTF-8, up to
+    :param text: A string encoded using either ASCII or UTF-8, up to
         28-bytes long.
 
     """
 
-    def __init__(self, text):
+    def __init__(self, text: str):
         if not isinstance(text, (str, unicode)):
             raise NotValidParamError('Expects string type got a {}'.format(type(text)))
         if bytes == str and not isinstance(text, unicode):
@@ -92,10 +92,10 @@ class TextMemo(Memo):
                                  "Got {:s}".format(str(length)))
 
     @classmethod
-    def from_xdr_object(cls, xdr_obj):
+    def from_xdr_object(cls, xdr_obj: Xdr.types.Memo):
         return cls(xdr_obj.switch.decode())
 
-    def to_xdr_object(self):
+    def to_xdr_object(self) -> Xdr.types.Memo:
         """Creates an XDR Memo object for a transaction with MEMO_TEXT."""
         return Xdr.types.Memo(type=Xdr.const.MEMO_TEXT, text=self.text)
 
