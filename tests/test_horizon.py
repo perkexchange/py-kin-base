@@ -56,7 +56,7 @@ async def test_sse(setup, helpers, aio_session):
                                                             sse=True):
                 events.append(event)
                 break
-    handler = asyncio.create_task(sse_handler(events))
+    handler = asyncio.ensure_future(sse_handler(events))
     await helpers.fund_account(setup, address, aio_session)
     await asyncio.sleep(5)
     assert len(events) == 1
