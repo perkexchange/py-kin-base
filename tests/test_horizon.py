@@ -76,7 +76,7 @@ async def test_sse_event_timeout(setup, helpers, aio_session):
                     sse=True, sse_timeout=15):
                 events.append(event)
 
-    handler = asyncio.create_task(sse_handler(events))
+    handler = asyncio.ensure_future(sse_handler(events))
     await helpers.fund_account(setup, address, aio_session)
     await asyncio.sleep(5)
     assert len(events) == 1
