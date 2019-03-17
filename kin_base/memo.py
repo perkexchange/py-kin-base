@@ -1,6 +1,4 @@
 # coding: utf-8
-import sys
-import six
 import abc
 import base64
 
@@ -8,11 +6,7 @@ from kin_base.utils import convert_hex_to_bytes
 from .stellarxdr import Xdr
 from .exceptions import NotValidParamError
 
-if sys.version_info.major == 3:
-    unicode = str
 
-
-@six.add_metaclass(abc.ABCMeta)
 class Memo:
     """The :class:`Memo` object, which represents the base class for memos for
     use with Stellar transactions.
@@ -78,18 +72,13 @@ class TextMemo(Memo):
     """
 
     def __init__(self, text: str):
-        if not isinstance(text, (str, unicode)):
+        if not isinstance(text, str):
             raise NotValidParamError('Expects string type got a {}'.format(type(text)))
-        if bytes == str and not isinstance(text, unicode):
-            # Python 2 without unicode string
-            self.text = text
-        else:
-            # Python 3 or Python 2 with unicode string
-            self.text = bytearray(text, encoding='utf-8')
+        self.text = bytearray(text, encoding='utf-8')
         length = len(self.text)
         if length > 28:
             raise NotValidParamError("Text should be <= 28 bytes (ascii encoded). "
-                                 "Got {:s}".format(str(length)))
+                                     "Got {:s}".format(str(length)))
 
     @classmethod
     def from_xdr_object(cls, xdr_obj: Xdr.types.Memo):

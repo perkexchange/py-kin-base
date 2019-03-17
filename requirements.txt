@@ -1,8 +1,6 @@
 crc16==0.1.1; sys_platform != "win32" and sys_platform != "cygwin"
 pure25519==0.0.1; sys_platform == "win32" or sys_platform == "cygwin"
 ed25519==1.4; sys_platform != "win32" and sys_platform != "cygwin"
-six==1.11.0
-toml==0.9.4
 mnemonic==0.18
-aiohttp==3.5.4
+aiohttp==3.5.*
 aiohttp_sse_client==0.1.4
