@@ -16,7 +16,7 @@ from .exceptions import HorizonError, HorizonRequestError
 import logging
 from typing import Union, Optional, AsyncGenerator
 
-logger = logging.getLogger('horizon')
+logger = logging.getLogger(__name__)
 
 
 HORIZON_LIVE = "https://horizon.kinfederation.com"
