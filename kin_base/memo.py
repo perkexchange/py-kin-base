@@ -1,6 +1,4 @@
 # coding: utf-8
-import sys
-import six
 import abc
 import base64
 
@@ -8,12 +6,8 @@ from kin_base.utils import convert_hex_to_bytes
 from .stellarxdr import Xdr
 from .exceptions import NotValidParamError
 
-if sys.version_info.major == 3:
-    unicode = str
 
-
-@six.add_metaclass(abc.ABCMeta)
-class Memo(object):
+class Memo:
     """The :class:`Memo` object, which represents the base class for memos for
     use with Stellar transactions.
 
@@ -47,7 +41,7 @@ class Memo(object):
     def from_xdr_object(cls, xdr_obj):
         return cls(xdr_obj.switch)
 
-    def xdr(self):
+    def xdr(self) -> bytes:
         """Packs and base64 encodes this :class:`Memo` as an XDR string."""
         x = Xdr.StellarXDRPacker()
         x.pack_Memo(self.to_xdr_object())
@@ -61,10 +55,10 @@ class NoneMemo(Memo):
     """The :class:`NoneMemo`, which represents no memo for a transaction."""
 
     @classmethod
-    def from_xdr_object(cls, _xdr_obj):
+    def from_xdr_object(cls, _xdr_obj: Xdr.types.Memo) -> 'NoneMemo':
         return cls()
 
-    def to_xdr_object(self):
+    def to_xdr_object(self) -> Xdr.types.Memo:
         """Creates an XDR Memo object for a transaction with no memo."""
         return Xdr.types.Memo(type=Xdr.const.MEMO_NONE)
 
@@ -72,30 +66,25 @@ class NoneMemo(Memo):
 class TextMemo(Memo):
     """The :class:`TextMemo`, which represents MEMO_TEXT in a transaction.
 
-    :param str text: A string encoded using either ASCII or UTF-8, up to
+    :param text: A string encoded using either ASCII or UTF-8, up to
         28-bytes long.
 
     """
 
-    def __init__(self, text):
-        if not isinstance(text, (str, unicode)):
+    def __init__(self, text: str):
+        if not isinstance(text, str):
             raise NotValidParamError('Expects string type got a {}'.format(type(text)))
-        if bytes == str and not isinstance(text, unicode):
-            # Python 2 without unicode string
-            self.text = text
-        else:
-            # Python 3 or Python 2 with unicode string
-            self.text = bytearray(text, encoding='utf-8')
+        self.text = bytearray(text, encoding='utf-8')
         length = len(self.text)
         if length > 28:
             raise NotValidParamError("Text should be <= 28 bytes (ascii encoded). "
-                                 "Got {:s}".format(str(length)))
+                                     "Got {:s}".format(str(length)))
 
     @classmethod
-    def from_xdr_object(cls, xdr_obj):
+    def from_xdr_object(cls, xdr_obj: Xdr.types.Memo):
         return cls(xdr_obj.switch.decode())
 
-    def to_xdr_object(self):
+    def to_xdr_object(self) -> Xdr.types.Memo:
         """Creates an XDR Memo object for a transaction with MEMO_TEXT."""
         return Xdr.types.Memo(type=Xdr.const.MEMO_TEXT, text=self.text)
 

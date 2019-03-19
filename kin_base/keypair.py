@@ -18,6 +18,8 @@ except ImportError:
 
 import hashlib
 
+from typing import Optional, Union
+
 
 def _get_key_of_expected_type(key, expected_type):
     if key is not None and not isinstance(key, expected_type):
@@ -25,7 +27,7 @@ def _get_key_of_expected_type(key, expected_type):
     return key
 
 
-class Keypair(object):
+class Keypair:
     """The :class:`Keypair` object, which represents a signing and
     verifying key for use with the Stellar network.
 
@@ -44,7 +46,7 @@ class Keypair(object):
 
     """
 
-    def __init__(self, verifying_key, signing_key=None):
+    def __init__(self, verifying_key: ed25519.VerifyingKey, signing_key: Optional[ed25519.SigningKey] = None):
         self.verifying_key = _get_key_of_expected_type(verifying_key,
                                                        ed25519.VerifyingKey)
         self.signing_key = _get_key_of_expected_type(signing_key,
@@ -82,13 +84,13 @@ class Keypair(object):
         return cls.from_raw_seed(seed)
 
     @classmethod
-    def random(cls):
+    def random(cls) -> 'Keypair':
         """Generate a :class:`Keypair` object via a randomly generated seed."""
         seed = os.urandom(32)
         return cls.from_raw_seed(seed)
 
     @classmethod
-    def from_seed(cls, seed):
+    def from_seed(cls, seed: str) -> 'Keypair':
         """Generate a :class:`Keypair` object via a strkey encoded seed.
 
         :param str seed: A base32 encoded secret seed string encoded as
@@ -101,7 +103,7 @@ class Keypair(object):
         return cls.from_raw_seed(raw_seed)
 
     @classmethod
-    def from_raw_seed(cls, raw_seed):
+    def from_raw_seed(cls, raw_seed: bytes) -> 'Keypair':
         """Generate a :class:`Keypair` object via a sequence of bytes.
 
         Typically these bytes are random, such as the usage of
@@ -137,7 +139,7 @@ class Keypair(object):
         return cls.from_raw_seed(raw_seed)
 
     @classmethod
-    def from_address(cls, address):
+    def from_address(cls, address: str) -> 'Keypair':
         """Generate a :class:`Keypair` object via a strkey encoded public key.
 
         :param str address: A base32 encoded public key encoded as described in
@@ -151,7 +153,7 @@ class Keypair(object):
 
     # TODO: Make some of the following functions properties?
 
-    def account_xdr_object(self):
+    def account_xdr_object(self) -> Xdr.types.PublicKey:
         """Create PublicKey XDR object via public key bytes.
 
         :return: Serialized XDR of PublicKey type.
@@ -159,7 +161,7 @@ class Keypair(object):
         return Xdr.types.PublicKey(Xdr.const.KEY_TYPE_ED25519,
                                    self.verifying_key.to_bytes())
 
-    def xdr(self):
+    def xdr(self) -> bytes:
         """Generate base64 encoded XDR PublicKey object.
 
         Return a base64 encoded PublicKey XDR object, for sending over the wire
@@ -183,42 +185,38 @@ class Keypair(object):
         """
         return self.verifying_key.to_bytes()
 
-    def raw_seed(self):
+    def raw_seed(self) -> bytes:
         """Get the bytes of the signing key's seed.
 
         :return: The signing key's secret seed as a byte sequence.
-        :rtype: bytes
         """
         return self.signing_key.to_seed()
 
-    def address(self):
+    def address(self) -> bytes:
         """Get the public key encoded as a strkey.
 
         See :func:`encode_check` for more details on the strkey encoding
         process.
 
         :return: The public key encoded as a strkey.
-        :rtype: bytes
         """
         return encode_check('account', self.raw_public_key())
 
-    def seed(self):
+    def seed(self) -> bytes:
         """Get the secret seed encoded as a strkey.
 
         See :func:`encode_check` for more details on the strkey encoding
         process.
 
         :return: The secret seed encoded as a strkey.
-        :rtype: bytes
         """
         return encode_check('seed', self.raw_seed())
 
-    def sign(self, data):
+    def sign(self, data: bytes) -> bytes:
         """Sign a bytes-like object using the signing (private) key.
 
-        :param bytes data: The data to sign
+        :param data: The data to sign
         :return: The signed data
-        :rtype: bytes
         """
         if self.signing_key is None:
             raise MissingSigningKeyError("KeyPair does not contain secret key. "
@@ -242,7 +240,7 @@ class Keypair(object):
         except ed25519.BadSignatureError:
             raise BadSignatureError("Signature verification failed.")
 
-    def sign_decorated(self, data):
+    def sign_decorated(self, data: bytes) -> Xdr.types.DecoratedSignature:
         """Sign a bytes-like object and return the decorated signature.
 
         Sign a bytes-like object by signing the data using the signing
@@ -258,7 +256,7 @@ class Keypair(object):
         hint = self.signature_hint()
         return Xdr.types.DecoratedSignature(hint, signature)
 
-    def signature_hint(self):
+    def signature_hint(self) -> bytes:
         """Get the signature hint derived from the public key in this
         :class:`Keypair`.
 

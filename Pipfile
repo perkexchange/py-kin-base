@@ -4,20 +4,17 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-numpy = "==1.15.2"
 "crc16" = "==0.1.1"
 "ed25519" = "==1.4"
-requests = "==2.20.0"
-six = "==1.11.0"
-stellar-base-sseclient = "==0.0.21"
-toml = "==0.9.4"
 mnemonic = "==0.18"
+aiohttp = "==3.5.*"
+aiohttp-sse-client = "==0.1.4"
 
 [dev-packages]
 pytest-cov = "*"
-pytest = "*"
 mock = "*"
 ply = "*"
+pytest-asyncio = "*"
 
 [requires]
 python_version = "3.7"

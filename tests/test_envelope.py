@@ -1,5 +1,4 @@
 # coding:utf-8
-from os import path
 import pytest
 
 from kin_base.operation import *
