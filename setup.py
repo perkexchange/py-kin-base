@@ -7,7 +7,7 @@ package_name = "kin-base"
 
 exec(open("kin_base/version.py").read())
 
-with codecs.open('README.rst', encoding='utf-8') as file:
+with codecs.open('README.md', encoding='utf-8') as file:
     long_description = file.read()
 
 tests_require = ['pytest', 'mock']

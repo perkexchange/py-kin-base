@@ -9,22 +9,22 @@ def test_sep0005():
     # https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0005.md
     mnemonic = 'illness spike retreat truth genius clock brain pass fit cave bargain toe'
     seed = Keypair.deterministic(mnemonic).seed()
-    assert seed == b'SBGWSG6BTNCKCOB3DIFBGCVMUPQFYPA2G4O34RMTB343OYPXU5DJDVMN'
+    assert seed == b'SDBKOVHBX2UFDTSEESHEEHR76OMJ5GMOWISBDC7BQOSF7FA2E23JRZLS'
     address = Keypair.deterministic(mnemonic, index=6).address().decode()
-    assert address == 'GBY27SJVFEWR3DUACNBSMJB6T4ZPR4C7ZXSTHT6GMZUDL23LAM5S2PQX'
+    assert address == 'GB37PRJSTEGB6CWTRU7DCSJWD4A22IYTGSHFEN73IJ3AM3CETFAZPRJO'
 
     mnemonic = 'cable spray genius state float twenty onion head street palace net private method loan turn phrase state blanket interest dry amazing dress blast tube'
     seed = Keypair.deterministic(mnemonic, passphrase='p4ssphr4se').seed()
-    assert seed == b'SAFWTGXVS7ELMNCXELFWCFZOPMHUZ5LXNBGUVRCY3FHLFPXK4QPXYP2X'
+    assert seed == b'SBRC5DWN6RPRY5IJABDVEUESPJBMQEIA5HNKEMERYUOKJ5VUCIXTSF6J'
     address = Keypair.deterministic(
         mnemonic, passphrase='p4ssphr4se', index=9).address().decode()
-    assert address == 'GBOSMFQYKWFDHJWCMCZSMGUMWCZOM4KFMXXS64INDHVCJ2A2JAABCYRR'
+    assert address == 'GDPJJCIKGNOM73NXVYX5R76PNATGDP7IW4TWSOY5HOARGKZY2ZSBTVEA'
 
     mnemonic = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
     seed = Keypair.deterministic(mnemonic).seed()
-    assert seed == b'SBUV3MRWKNS6AYKZ6E6MOUVF2OYMON3MIUASWL3JLY5E3ISDJFELYBRZ'
+    assert seed == b'SDRX36LJA7O4S5GZ3PF7CCLO5S5XEXO6SAV7SFCHRCQHAASE2HOJY6TX'
     address = Keypair.deterministic(mnemonic, index=8).address().decode()
-    assert address == 'GABTYCZJMCP55SS6I46SR76IHETZDLG4L37MLZRZKQDGBLS5RMP65TSX'
+    assert address == 'GCAZEAOQBCGBJKH7OKJO35NIHAVGNP3A5NN2MUNB37Z4MI35AIC7K5PC'
 
 
 class KeypairTest(TestCase):
