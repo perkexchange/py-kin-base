@@ -135,3 +135,13 @@ class TestUtils(TestCase):
         sm = utils.StellarMnemonic('chinese')
         mnemonic = u'域 监 惜 国 期 碱 珍 继 造 监 剥 电'
         assert sm.check(mnemonic)
+
+    def test_kin_mnemonic(self):
+        wordlist = 'resemble proud guard topple ignore alpha venue' \
+                   ' swallow shell entry sibling legend dice repeat' \
+                   ' ranch pink bunker theory key poem during mixed agent tube'
+        index = '1'
+        mnemonic = utils.StellarMnemonic()
+        raw_seed = mnemonic.to_seed(wordlist, index)
+        assert raw_seed == b"\x16\xcb\x89*\xc3\xe1a\xd3\x1c\xe8\xd5\xf8\xe9x'\x7f\xb5\xea\x8e\xb6\x92$\xa9D \x1f\xa4ne\x89\x1c}"
+

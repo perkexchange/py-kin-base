@@ -175,12 +175,13 @@ def division(n, d):
 # mnemonic
 
 PBKDF2_ROUNDS = 2048
+KIN_BIP_PATH = "m/44'/2017'/%d'"
 
 
 class StellarMnemonic(Mnemonic):
     def __init__(self, language='english'):
         self.radix = 2048
-        self.stellar_account_path_format = "m/44'/148'/%d'"
+        self.stellar_account_path_format = KIN_BIP_PATH
         self.first_hardened_index = 0x80000000
         self.seed_modifier = b"ed25519 seed"
         lang_dir = Mnemonic._get_directory() \
