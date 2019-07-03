@@ -113,7 +113,6 @@ class Horizon(object):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.close()
 
-    @_retry
     async def submit(self, te: str) -> dict:
         """Submit the transaction using a pooled connection, and retry on failure.
 
@@ -216,7 +215,7 @@ class Horizon(object):
                                 # Events that dont have an id are not useful for us (hello/byebye events)
                                 # Save the last event id and retry time
                                 last_id = event.last_event_id
-                                retry = client._reconnection_time
+                                retry = client._reconnection_time.total_seconds()
                                 try:
                                     yield json.loads(event.data)
                                 except json.JSONDecodeError:
@@ -225,7 +224,7 @@ class Horizon(object):
                 except aiohttp.ClientPayloadError:
                     # Retry if the connection dropped after we got the initial response
                     logger.debug('Resetting SSE connection for {} after timeout'.format(url))
-                    await asyncio.sleep(retry.total_seconds())
+                    await asyncio.sleep(retry)
 
         await self._init_sse_session()
         gen = _sse_generator()
