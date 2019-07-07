@@ -15,6 +15,7 @@ pytest-cov = "*"
 mock = "*"
 ply = "*"
 pytest-asyncio = "*"
+asynctest = "*"
 
 [requires]
 python_version = "3.7"
