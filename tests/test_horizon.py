@@ -1,10 +1,15 @@
 # encoding: utf-8
 import asyncio
 import pytest
+import time
+from mock import MagicMock
+
+from aiohttp import ClientConnectionError
 
 from kin_base.keypair import Keypair
 from kin_base.operation import *
 from kin_base.horizon import Horizon
+from kin_base.exceptions import HorizonRequestError
 from kin_base.transaction import Transaction
 from kin_base.transaction_envelope import TransactionEnvelope as Te
 
@@ -85,4 +90,19 @@ async def test_sse_event_timeout(setup, helpers, aio_session):
     with pytest.raises(asyncio.TimeoutError):
         raise handler.exception()
 
-# TODO: test horizon retries once we move to response mocking
+
+@pytest.mark.asyncio
+async def test_horizon_retry(setup):
+    async with Horizon(setup.horizon_endpoint_uri) as horizon:
+        horizon._session.get = MagicMock(side_effct=ClientConnectionError)
+
+        start = time.time()
+        with pytest.raises(HorizonRequestError):
+            await horizon.account('GA3FLH3EVYHZUHTPQZU63JPX7ECJQL2XZFCMALPCLFYMSYC4JKVLAJWM')
+
+        elapsed = time.time() - start
+        # Sum of arithmetic progression
+        expected_time = (2 * horizon.backoff_factor + (horizon.num_retries - 1) * horizon.backoff_factor) *\
+                        horizon.num_retries / 2
+        assert horizon._session.get.call_count == horizon.num_retries
+        assert elapsed >= expected_time

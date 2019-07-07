@@ -49,7 +49,7 @@ def _retry(func):
                 else:
                     raise
                 logger.debug('# Retry {}: {}'.format(func.__name__, i))
-                await asyncio.sleep(self.backoff_factor * i)
+                await asyncio.sleep(self.backoff_factor * (i + 1))
 
     return wrapper
 
@@ -129,8 +129,8 @@ class Horizon(object):
         abs_url = self.horizon_uri.join(URL('/transactions'))
         try:
             reply = await self._post(abs_url, params)
-        except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError) as e:
-                raise HorizonRequestError(e)
+        except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError, asyncio.TimeoutError) as e:
+            raise HorizonRequestError(e)
 
         return check_horizon_reply(reply)
 
@@ -147,8 +147,8 @@ class Horizon(object):
         abs_url = self.horizon_uri.join(rel_url)
         try:
             reply = await self._get(abs_url, params, sse, sse_timeout=sse_timeout)
-        except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError) as e:
-                raise HorizonRequestError(e)
+        except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError, asyncio.TimeoutError) as e:
+            raise HorizonRequestError(e)
 
         return check_horizon_reply(reply) if not sse else reply
 
