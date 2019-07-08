@@ -33,11 +33,11 @@ def _retry(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         self = args[0]
-        for i in range(self.num_retries + 1):
+        for i in range(self.num_retries):
             try:
                 return await func(*args, **kwargs)
             except Exception as e:
-                if i == self.num_retries:
+                if i == self.num_retries - 1:
                     raise
                 elif isinstance(e, (aiohttp.ClientConnectionError, aiohttp.ContentTypeError, asyncio.TimeoutError)):
                     """
@@ -154,7 +154,7 @@ class Horizon(object):
 
     @_retry
     async def _get(self, url: URL, params: Optional[dict] = None, sse: Optional[bool] = False,
-                    sse_timeout: Optional[Union[float, None]] = None) -> Union[dict, AsyncGenerator]:
+                   sse_timeout: Optional[Union[float, None]] = None) -> Union[dict, AsyncGenerator]:
         """
         Send a get request
         :param url: The url to send a request to

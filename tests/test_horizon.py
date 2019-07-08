@@ -2,7 +2,7 @@
 import asyncio
 import pytest
 import time
-from asynctest import CoroutineMock
+from asynctest import MagicMock
 
 from aiohttp import ClientConnectionError
 
@@ -95,15 +95,15 @@ async def test_sse_event_timeout(setup, helpers, aio_session):
 async def test_horizon_retry(setup):
 
     async with Horizon(setup.horizon_endpoint_uri) as horizon:
-        horizon._get = CoroutineMock(side_effct=ClientConnectionError)
-
+        horizon._session.get = MagicMock(side_effect=ClientConnectionError)
         start = time.time()
         with pytest.raises(HorizonRequestError):
             await horizon.account('GA3FLH3EVYHZUHTPQZU63JPX7ECJQL2XZFCMALPCLFYMSYC4JKVLAJWM')
 
         elapsed = time.time() - start
         # Sum of arithmetic progression
-        expected_time = (2 * horizon.backoff_factor + (horizon.num_retries - 1) * horizon.backoff_factor) *\
-                        horizon.num_retries / 2
+        a_n = horizon.num_retries - 1
+        expected_time = ((2 * horizon.backoff_factor + (a_n - 1) * horizon.backoff_factor) *
+                         a_n / 2)
         assert horizon._session.get.call_count == horizon.num_retries
         assert elapsed >= expected_time

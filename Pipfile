@@ -16,6 +16,7 @@ mock = "*"
 ply = "*"
 pytest-asyncio = "*"
 asynctest = "*"
+ipython = "*"
 
 [requires]
 python_version = "3.7"
