@@ -95,7 +95,7 @@ async def test_sse_event_timeout(setup, helpers, aio_session):
 async def test_horizon_retry(setup):
 
     async with Horizon(setup.horizon_endpoint_uri) as horizon:
-        horizon._session._request = CoroutineMock(side_effct=ClientConnectionError)
+        horizon._get = CoroutineMock(side_effct=ClientConnectionError)
 
         start = time.time()
         with pytest.raises(HorizonRequestError):
