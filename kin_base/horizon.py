@@ -202,7 +202,7 @@ class Horizon(object):
                     """
                     async with SSEClient(url, session=self._sse_session,
                                          params={'cursor': last_id},
-                                         headers=HEADERS) as client:
+                                         headers=HEADERS.copy()) as client:
                         """
                         We want to throw a TimeoutError if we didnt get any event in the last x seconds.
                         read_timeout in aiohttp is not implemented correctly https://github.com/aio-libs/aiohttp/issues/1954
