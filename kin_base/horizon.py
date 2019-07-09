@@ -33,11 +33,11 @@ def _retry(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         self = args[0]
-        for i in range(self.num_retries + 1):
+        for i in range(self.num_retries):
             try:
                 return await func(*args, **kwargs)
             except Exception as e:
-                if i == self.num_retries:
+                if i == self.num_retries - 1:
                     raise
                 elif isinstance(e, (aiohttp.ClientConnectionError, aiohttp.ContentTypeError, asyncio.TimeoutError)):
                     """
@@ -49,7 +49,7 @@ def _retry(func):
                 else:
                     raise
                 logger.debug('# Retry {}: {}'.format(func.__name__, i))
-                await asyncio.sleep(self.backoff_factor * i)
+                await asyncio.sleep(self.backoff_factor * (i + 1))
 
     return wrapper
 
@@ -113,7 +113,6 @@ class Horizon(object):
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.close()
 
-    @_retry
     async def submit(self, te: str) -> dict:
         """Submit the transaction using a pooled connection, and retry on failure.
 
@@ -130,8 +129,8 @@ class Horizon(object):
         abs_url = self.horizon_uri.join(URL('/transactions'))
         try:
             reply = await self._post(abs_url, params)
-        except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError) as e:
-                raise HorizonRequestError(e)
+        except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError, asyncio.TimeoutError) as e:
+            raise HorizonRequestError(e)
 
         return check_horizon_reply(reply)
 
@@ -148,14 +147,14 @@ class Horizon(object):
         abs_url = self.horizon_uri.join(rel_url)
         try:
             reply = await self._get(abs_url, params, sse, sse_timeout=sse_timeout)
-        except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError) as e:
-                raise HorizonRequestError(e)
+        except (aiohttp.ClientConnectionError, aiohttp.ContentTypeError, asyncio.TimeoutError) as e:
+            raise HorizonRequestError(e)
 
         return check_horizon_reply(reply) if not sse else reply
 
     @_retry
     async def _get(self, url: URL, params: Optional[dict] = None, sse: Optional[bool] = False,
-                    sse_timeout: Optional[Union[float, None]] = None) -> Union[dict, AsyncGenerator]:
+                   sse_timeout: Optional[Union[float, None]] = None) -> Union[dict, AsyncGenerator]:
         """
         Send a get request
         :param url: The url to send a request to
@@ -203,7 +202,7 @@ class Horizon(object):
                     """
                     async with SSEClient(url, session=self._sse_session,
                                          params={'cursor': last_id},
-                                         headers=HEADERS) as client:
+                                         headers=HEADERS.copy()) as client:
                         """
                         We want to throw a TimeoutError if we didnt get any event in the last x seconds.
                         read_timeout in aiohttp is not implemented correctly https://github.com/aio-libs/aiohttp/issues/1954
@@ -216,7 +215,7 @@ class Horizon(object):
                                 # Events that dont have an id are not useful for us (hello/byebye events)
                                 # Save the last event id and retry time
                                 last_id = event.last_event_id
-                                retry = client._reconnection_time
+                                retry = client._reconnection_time.total_seconds()
                                 try:
                                     yield json.loads(event.data)
                                 except json.JSONDecodeError:
@@ -225,7 +224,7 @@ class Horizon(object):
                 except aiohttp.ClientPayloadError:
                     # Retry if the connection dropped after we got the initial response
                     logger.debug('Resetting SSE connection for {} after timeout'.format(url))
-                    await asyncio.sleep(retry.total_seconds())
+                    await asyncio.sleep(retry)
 
         await self._init_sse_session()
         gen = _sse_generator()

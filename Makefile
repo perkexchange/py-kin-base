@@ -6,7 +6,7 @@ default: ;
 init:
 	pip install .
 	pip install -e .
-	pip install pytest-cov ply mock pytest-asyncio
+	pip install pytest-cov ply mock pytest-asyncio asynctest
 .PHONY: init
 
 start:
