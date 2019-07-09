@@ -96,14 +96,35 @@ async def test_horizon_retry(setup):
 
     async with Horizon(setup.horizon_endpoint_uri) as horizon:
         horizon._session.get = MagicMock(side_effect=ClientConnectionError)
+        horizon.num_retries = 3
+        expected_time = 1.5  # 0 + 0.5 + 1
         start = time.time()
         with pytest.raises(HorizonRequestError):
             await horizon.account('GA3FLH3EVYHZUHTPQZU63JPX7ECJQL2XZFCMALPCLFYMSYC4JKVLAJWM')
 
         elapsed = time.time() - start
-        # Sum of arithmetic progression
-        a_n = horizon.num_retries - 1
-        expected_time = ((2 * horizon.backoff_factor + (a_n - 1) * horizon.backoff_factor) *
-                         a_n / 2)
         assert horizon._session.get.call_count == horizon.num_retries
         assert elapsed >= expected_time
+
+
+@pytest.mark.asyncio
+async def test_horizon_retry_successes(setup):
+
+    class MockedGet:
+        def __init__(self, return_value):
+            self.return_value = return_value
+
+        async def __aenter__(self):
+            return self.return_value
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    async with Horizon(setup.horizon_endpoint_uri) as horizon:
+        real_resp = await horizon._session.get(setup.horizon_endpoint_uri + "/accounts/GA3FLH3EVYHZUHTPQZU63JPX7ECJQL2XZFCMALPCLFYMSYC4JKVLAJWM")
+        horizon._session.get = MagicMock(side_effect=[ClientConnectionError, MockedGet(real_resp)])
+        horizon.num_retries = 3
+        res = await horizon.account('GA3FLH3EVYHZUHTPQZU63JPX7ECJQL2XZFCMALPCLFYMSYC4JKVLAJWM')
+
+        assert horizon._session.get.call_count == 2
+        assert res
