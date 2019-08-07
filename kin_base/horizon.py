@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 HORIZON_LIVE = "https://horizon.kinfederation.com"
 HORIZON_TEST = "https://horizon-testnet.kininfrastructure.com"
+# (hello/byebye events) are send on the start and end of the connection
+SSE_IGNORE_MESSAGES = ['"hello"', '"byebye"']
 DEFAULT_REQUEST_TIMEOUT = 11  # two ledgers + 1 sec, let's retry faster and not wait 60 secs.
 DEFAULT_NUM_RETRIES = 3
 DEFAULT_BACKOFF_FACTOR = 0.5
@@ -218,8 +220,7 @@ class Horizon(object):
                         Note that the timeout starts from the first event forward. There is no until we get the first event.
                         """
                         async for event in client:
-                            if event.data not in ['hello', 'byebye']:
-                                # (hello/byebye events) are send on the start and end of the connection
+                            if event.data not in SSE_IGNORE_MESSAGES:
                                 # Save the last event id and retry time
                                 sse_params['cursor'] = event.last_event_id
                                 retry = client._reconnection_time.total_seconds()
