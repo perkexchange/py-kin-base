@@ -8,7 +8,7 @@ name = "pypi"
 "ed25519" = "==1.4"
 mnemonic = "==0.18"
 aiohttp = "==3.5.*"
-aiohttp-sse-client = "==0.1.4"
+aiohttp-sse-client = "==0.1.5"
 
 [dev-packages]
 pytest-cov = "*"

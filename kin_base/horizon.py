@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 HORIZON_LIVE = "https://horizon.kinfederation.com"
 HORIZON_TEST = "https://horizon-testnet.kininfrastructure.com"
+# (hello/byebye events) are send on the start and end of the connection
+SSE_IGNORE_MESSAGES = ['"hello"', '"byebye"']
 DEFAULT_REQUEST_TIMEOUT = 11  # two ledgers + 1 sec, let's retry faster and not wait 60 secs.
 DEFAULT_NUM_RETRIES = 3
 DEFAULT_BACKOFF_FACTOR = 0.5
@@ -166,7 +168,7 @@ class Horizon(object):
         if not sse:
             async with self._session.get(url, params=params) as response:
                 return await response.json(encoding='utf-8')
-        return self.sse_generator(url, sse_timeout)
+        return self.sse_generator(url, params.get('cursor', 'now'), params.get('limit', None), sse_timeout)
 
     @_retry
     async def _post(self, url: URL, params: Optional[dict] = None) -> dict:
@@ -179,10 +181,13 @@ class Horizon(object):
         async with self._session.post(url, params=params) as response:
             return await response.json(encoding='utf-8')
 
-    async def sse_generator(self, url: Union[str, URL], timeout: Union[float, None]) -> AsyncGenerator:
+    async def sse_generator(self, url: Union[str, URL], cursor: str = 'now', limit: Optional[int] = None,
+                            timeout: Optional[float] = None) -> AsyncGenerator:
         """
         SSE generator with timeout between events
         :param url: URL to send SSE request to
+        :param cursor: Id to start the stream from
+        :param limit: How many records to retrieve before the blockchain closes the connection
         :param timeout: The time to wait for a a new event
         :return: AsyncGenerator[dict]
         """
@@ -191,7 +196,11 @@ class Horizon(object):
             Generator for sse events
             :rtype AsyncGenerator[dict]
             """
-            last_id = 'now'  # Start monitoring from now.
+            sse_params = {
+                'cursor': cursor,
+                'limit': limit
+            }
+
             retry = 0.1
             while True:
                 try:
@@ -201,7 +210,7 @@ class Horizon(object):
                     Headers are needed because of a bug that makes "params" override the default headers
                     """
                     async with SSEClient(url, session=self._sse_session,
-                                         params={'cursor': last_id},
+                                         params=sse_params,
                                          headers=HEADERS.copy()) as client:
                         """
                         We want to throw a TimeoutError if we didnt get any event in the last x seconds.
@@ -211,10 +220,9 @@ class Horizon(object):
                         Note that the timeout starts from the first event forward. There is no until we get the first event.
                         """
                         async for event in client:
-                            if event.last_event_id != '':
-                                # Events that dont have an id are not useful for us (hello/byebye events)
+                            if event.data not in SSE_IGNORE_MESSAGES:
                                 # Save the last event id and retry time
-                                last_id = event.last_event_id
+                                sse_params['cursor'] = event.last_event_id
                                 retry = client._reconnection_time.total_seconds()
                                 try:
                                     yield json.loads(event.data)
