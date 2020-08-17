@@ -54,7 +54,7 @@ async def test_builder_(setup, test_data):
         cold.sign(hot_secret)
 
     assert len(cold.te.signatures) == 2
-    assert len(cold.ops) == 5
+    assert len(cold.ops) == 6
 
     response = await cold.submit()
     assert response.get('hash') == cold.hash_hex()
