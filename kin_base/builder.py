@@ -62,15 +62,11 @@ class Builder:
         """Append an :class:`Operation <kin_base.operation.Operation>` to
         the list of operations.
 
-        Add the operation specified if it doesn't already exist in the list of
-        operations of this :class:`Builder` instance.
-
         :param operation: The operation to append to the list of operations.
         :return: This builder instance.
 
         """
-        if operation not in self.ops:
-            self.ops.append(operation)
+        self.ops.append(operation)
         return self
 
     def append_create_account_op(self,
